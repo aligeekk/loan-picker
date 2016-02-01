@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container">
+
+	<div class="blog-header">
+		<a style="pointer-events: none; cursor: default;" name="Calc Exp Returns">
+		<h1 style="padding-top: 50px; margin-top: -50px;" class="blog-title">Computing expected returns</h1>
+		</a>
+		<p class="lead blog-description">A key first step to developing predictive models of loan outcomes using the Lending Club data is to develop a consistent metric of loan performance that can be applied to both matured and outstanding loans. I use the annualized expected returns, as described below.</p>
+
+	</div>
+
+<div class="row">
+	<div class="col-sm-12 blog-main">
+
+		<!-- POST ABOUT DIFFERENT LOAN STATUSES-->
+		<div class="blog-post">
+			<a style="pointer-events: none; cursor: default;" name="Loan Status">
+			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Loan Status</h2>
+			</a>
+			<p>We are given the current status of each loan. The older loans have all matured, and either have a status of 'fully paid' or they have been 'charged off' (i.e. they have defaulted and the ouststanding principal has been written off). More recently issued loans are mostly listed as 'current', meaning the borrower is up-to-date on their payments. They can also be at various stages of delinquency, ranging from 'in grace period' to 'default'.</p>
+			<p>Due to the recent rise in popularity of Lending Club, most loans in the dataset were issued recently, and are most likely to be listed as "Current" (left panel). Lending Club also assigns each loan a grade based on their risk assessment, which determines the interest rate they set. As expected, "F" grade loans are more likely to be delinquent or defaulted compared to "A" grade loans (right panel shows relative frequencies of loan status for each loan grade).</p>
+			<div class="row">
+			<div class="col-sm-6">
+			<img src="/static/images/year_cond_dist.png" width="500" class="img-responsive center-block"></img>
+			</div>
+			<div class="col-sm-6">
+			<img src="/static/images/grade_cond_dists.png" width="500" class="img-responsive center-block"></img>
+			</div>
+		</div>
+		</div>
+
+		<!-- POST ABOUT HAZARD FUNCTIONS-->
+		<div class="blog-post">
+			<a style="pointer-events: none; cursor: default;" name="Annualized Returns">
+			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Annualized Returns</h2>
+			</a>
+			<p>Calculating returns on matured loans is relatively straightforward, at least using the 'net annualized returns' (NAR) formula used by Lending Club. This simply calculates the percentage return in each month (interest made, minus service fees and principal lost through charge-offs), and then computes an average monthly return, weighted by the outstanding principal in each month. This in then converted into an annualized return by compounding monthly. </p>
+			<img src="/static/images/LC_NAR_formula.png" width="700" class="img-responsive center-block"></img>
+			<p>(Taken from the Lending Club <a href="https://www.lendingclub.com/public/lendersPerformanceHelpPop.action">website</a>)</p>
+		</div>
+		
+		<div class="blog-post">
+			<a style="pointer-events: none; cursor: default;" name="Hazard Functions">
+			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Hazard Functions</h2>
+			</a>
+			<p>For outstanding loans it's more difficult because we don't know what the full payment outcome will be, so we can't directly calculate the NAR. My approach is to use the current status and payment history of each loan to estimate an 'expected' rate of return. To do this I first need to compute the probabiliy that a given loan will go into default at each payment period. These probabilities are described by a 'hazard function', which I estimate for each loan grade, and for each loan term (36 month and 60 month loans).</p>
+
+			<p>I use the Python module <a href="http://lifelines.readthedocs.org/en/latest/">lifelines</a> to estimate the hazard functions. This analysis shows that riskier loans (higher letter grades) are both more likely to default overall, and are more likely to default earlier in the loan term (the hazard functions are shifted leftwards).</p>
+			<img src="/static/images/hazard_funs.png" width="900" class="center-block"></img>
+		</div>
+
+
+		<!-- POST ABOUT EXPECTED RETURNS-->
+		<div class="blog-post">
+			<a style="pointer-events: none; cursor: default;" name="Expected Returns">
+			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Expected Returns</h2>
+			</a>
+			<p>Given the hazard function for each loan type, estimating the expected return for a given loan is relatively straightforward. We first calculate the average monthly return (<i>MR</i>) that we would recieve if the loan defaulted at each possible payment period <i>MR</i>(<i>default</i><sub><i>i</i></sub>). We can then calculate the weighted average of <i>MR</i>, using the estimated default probabilities at each time point, and convert it into an annualized return.</p>
+			<center><img src="static/images/expected_returns.png?{{rnum}}" width="500"></img></center>
+			<p>For an outstanding loan, we set the default probabilities to 0 for all payments that have already been received. We also use a heuristic strategy to incorporate the reported loan status. Specifically, I use the data Lending Club provides <a href="https://www.lendingclub.com/info/demand-and-credit-profile.action">here</a> (bottom of page) on the average fraction of principal recovered for loans in varying stages of delinquincy. I also assume that if payment is resumed, the loan returns to having its original set of default probabilities for the remainder of its term.</p>
+			<p>The figures below show how these expected return values depend on both a loan's default probability, as well as its interest rate.</p>
+			
+		<div class="row">
+			<div class="col-sm-6">
+				<img src="/static/images/ROI_def_prob.png?{{rnum}}" width="450" class="center-block"></img>
+			</div>
+			<div class="col-sm-6">
+			<img src="/static/images/int_ROI_joints.png?{{rnum}}" width="400" class="center-block"></img>
+		</div>
+	</div>
+			<p>** Explanation **.</p>
+			<img src="/static/images/returns_box.png?{{rnum}}" width="500" class="center-block"></img>
+		</div>
+	</div>
+
+
+	<!--<div class="blog-header">
+	</div> -->
+	</div>
+	<a style="pointer-events: none; cursor: default;" name="Modeling Details">
+		<h1 style="padding-top: 50px; margin-top: -50px;"  class="blog-title">Modeling Details</h1>
+		</a>
+		<p class="lead blog-description">CONTAINER FOR MODELING DETAILS</p>
+
+	<div class="row">
+		<div class="col-sm-12 blog-main">
+
+		<!-- Post abut visualizing Random Forest regression -->
+		<div class="blog-post">
+			<br>
+			<a style="pointer-events: none; cursor: default;" name="Decision tree">
+			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Visualizing decision tree regression</h2>
+			</a>
+			<p>This animation shows the model-predicted average returns by county, using a decision tree with increasing 'tree depth'. As the decision tree depth increases, the number of 'partitions' of the input space, within which the model can estimate separate average returns, increases exponentially.</p>
+			<video class="img-responsive center-block" width="600" controls>
+ 			 <source src="/static/movies/tree_movie.mp4?{{rnum}}" type="video/mp4">
+			Your browser does not support the video tag.
+			</video>
+			<img class="img-responsive center-block" src="/static/movies/tree_cbar.png?{{rnum}}" width="600"></img>
+		</div>
+
+		<div class="blog-post">
+			<a style="pointer-events: none; cursor: default;" name="Cross validation">
+			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Controlling for overfitting</h2>
+			</a>
+			<p>As the tree depth increases, the model becomes more complex, allowing it to become 'overfit' to the training data. We can see this by comparing the prediction accuracy (R2) on both the training set (in-sample accuracy) and the test set (out-of-sample accuracy) for trees of different depths. Random forests, which take the average prediction of an ensemble of decision trees, provide a means of reducing overfitting while maintaining the flexibility of more complicated models.</p>
+			<img class="img-responsive center-block" src="/static/images/R2_vs_treedepth.png?{{rnum}}" width="900"></img>
+		</div>
+
+		<div class="blog-post">
+			<a style="pointer-events: none; cursor: default;" name="Portfolio returns">
+			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Estimating returns on loan portfolios</h2>
+			</a>
+			<p>Above we measure model performance using R2, or the fraction of variance in the annualized loan returns captured by our model predictions. A more useful measure of model performance would quantify the returns on a portfolio of loans selected using a particular strategy. To do this, we can estimate the returns on investment portfolios with K loans, where we select the top K loans predicted by our model (see [link] for details on estimating portfolio returns). </p>
+				<img class="img-responsive center-block" src="/static/images/loan_pred_examp.png?{{rnum}}" width="500"></img>
+		</div>
+
+
+	</div>
+</div>
+
+{% endblock %}

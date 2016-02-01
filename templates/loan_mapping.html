@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container">
+
+	<div class="blog-header">
+		<h1 class="blog-title">Mapping Loan Performance</h1>
+<!-- 		<p class="lead blog-description">Blah blah.</p>
+-->	
+</div>
+
+<div class="row">
+	<div class="col-sm-12 blog-main">
+
+		<!-- POST ABOUT DIFFERENT LOAN STATUSES-->
+		<div class="blog-post" style="position:absolute;top:0px;">
+			<h4>Use the options below to visualize how different loan attributes vary geographically.<br>Learn more about how to calculate loan returns <a href="expected_returns#Calc Exp Returns">here.</a></h4>
+			
+			<form action="" method="post" name="map_form">
+				<div class="row">
+					<div class="col-sm-6 col-sm-push-1">
+						<p><b>Choose grouping variable</b> {{ map_form.grouping_var }}</p>
+						<p><b>Choose agg function</b> {{ map_form.agg_fun }}</p>
+					</div>
+					<div class="col-sm-6">
+						<p><b>Choose value to plot</b>{{ map_form.col_name }}</p>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-sm-4 col-sm-push-3">			
+						<p><input class="btn btn-success" type="Submit" value="Submit"></p>
+				 	</div>
+					<div class="col-sm-4 col-sm-push-3">			
+						<a href="reset_map" class="btn btn-danger" role="button">Reset map</a>
+					</div>
+				</div>
+
+			</form>
+			<div style="position:absolute;left:-80px;z-index:0;">
+				{{svg}}
+			</div>
+		</div>
+		{% if map_rendered %}
+		<img src="/static/images/map_cbar.png?{{rnum}}" width="600" style="position:absolute;top:770px;z-index:1"></img>
+
+		{% if map_form.data['agg_fun'] == 'mean' %}
+			<div class="blog-post" style="position:relative; top:900px;left:0px;z-index:1">
+			<!-- Make plot of cumulative distributions -->
+
+			<h3 style="left:100px">Cumulative distributions of {{map_form.var_dict[map_form.data['col_name']]}} grouped by {{map_form.group_dict[map_form.data['grouping_var']]}}</h3>
+			<p>This shows how much geographic variability there was in the within-location averages, relative to what would be expected by chance.</p>
+			<img src="/static/images/{{map_form.data['grouping_var']}}_ROI_cdist.png?{{rnum}}" width="600"></img>
+			<br>
+			</div>
+		{% endif %}
+		{% endif %}
+
+		</div>
+	</div>
+</div>
+
+
+</div>
+
+
+{% endblock %}

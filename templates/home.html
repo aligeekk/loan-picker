@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container theme-showcase" role="main">
+
+	<!-- Main jumbotron for a primary marketing message or call to action -->
+	<div class="jumbotron">
+		<h1>{{app_title}}</h1>
+		<div class="row">
+			<div class="col-sm-12">
+				<p>Tools for exploring Lending Club's peer-to-peer lending data, and developing investment strategies</p>
+			</div>
+		</div>
+	</div>
+
+
+	<!-- ENTRY FOR LOAN MAPPING ANALYSIS -->
+	<div class="well">
+		<div class="row">
+			<div class="col-sm-7">
+				<iframe src="/static/images/outmap.svg" width="100%" height="300" scrolling="no" frameBorder="0"></iframe>
+			</div>
+			<div class="col-sm-5">
+				<h2 class="featurette-heading">Explore the data</h2>
+				<p class="lead">Visualize trends in loan properties and performance by geographic location, and across time.</p>
+				<div class="col-sm-6">
+					<a href="loan_mapping" class="btn btn-lg btn-primary" role="button">By location</a>
+				</div>
+				<div class="col-sm-6">
+					<a href="time_series_form" class="btn btn-lg btn-primary" role="button">By time</a>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ENTRY FOR PREDICTION ANALYSIS -->
+	<div class="well">
+		<div class="row">
+			<div class="col-sm-7">
+				<img class="img-responsive" src="/static/images/model_compare_thumb.png" width="500" height="100%"></img>
+			</div>
+			<div class="col-sm-5">
+				<h2 class="featurette-heading">Predicting loan performance</h2>
+				<p class="lead">Compare the predictive accuracy of different models, and estimate returns on different loan investment strategies. </p>
+				<a href="models" class="btn btn-lg btn-primary" role="button">See the results</a>
+			</div>
+		</div>
+	</div>
+
+	<!--  ENTRY FOR EXPECTED RETURN ANALYSIS-->
+	<div class="well">
+		<div class="row">
+			<div class="col-sm-7">
+				<img class="img-responsive" src="/static/images/36month_hazards.png" width="500" height="100%"></img>
+			</div>
+
+			<div class="col-sm-5">
+				<h2 class="featurette-heading">Analysis Details</h2>
+				<p class="lead">More details on everything from estimating expected returns on outstanding loans, to feature selection and model cross-validation.</p>
+				<a href="expected_returns" class="btn btn-lg btn-primary" role="button">Learn More</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% endblock %}

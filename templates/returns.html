@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container">
+
+	<div class="blog-header">
+		<h1 class="blog-title">Testing a simple strategy</h1>
+		<p class="lead blog-description">How much better do we do if we select only loans from the best K states or zip-code regions?.</p>
+</div>
+<div class="row">
+	<div class="col-sm-12 blog-main">
+		<p>We will determine how much better than chance we would have done if we had picked from the loans being issued at each time based on the previous loan performance up to that point, just using a pick-the-best-K strategy</p>
+
+			<form action="" method="post" name="returns_form">
+				<div class="row">
+					<div class="col-sm-8">
+						<p><b>Choose grouping variable</b> {{ returns_form.grouping_var }}</p>
+						<p><b>Enter a percentile</b> {{ returns_form.best_K }}</p>
+						<p><b>Enter smoothing span</b> {{ returns_form.smooth_span }}</p>
+					</div>
+				</div>
+				<p><input type="submit" value="Submit"></p>
+
+			<img src="/static/images/returns.png?{{rnum}}" width="700"></img>
+	
+	</div>
+</div>
+
+
+{% endblock %}
