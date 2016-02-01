@@ -169,8 +169,8 @@ def loan_mapping(map_rendered=False):
          pal = LCH.paint_map(data, app.base_map, app.county_paths, fips_to_zip, 
                              color='cube', agg_fun=mform.data['agg_fun'])        
          
-         plt.savefig(tmp_dir + 'map_cbar.png', dpi=500, format='png')
-         plt.close()
+         # plt.savefig(tmp_dir + 'map_cbar.png', dpi=500, format='png')
+         # plt.close()
          
     return render_template('loan_mapping.html', map_form=mform, svg=Markup(str(app.base_map)),
                 rnum=np.random.randint(0,100000), map_rendered = map_rendered) #if request method was GET
