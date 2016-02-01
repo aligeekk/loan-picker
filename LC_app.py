@@ -169,8 +169,8 @@ def loan_mapping(map_rendered=False):
          pal = LCH.paint_map(data, app.base_map, app.county_paths, fips_to_zip, 
                              color='cube', agg_fun=mform.data['agg_fun'])        
          print('painted map')
-         # plt.savefig(tmp_dir + 'map_cbar.png', dpi=500, format='png')
-         # plt.close()
+         plt.savefig(tmp_dir + 'map_cbar.png', dpi=500, format='png')
+         plt.close()
          
     return render_template('loan_mapping.html', map_form=mform, svg=Markup(str(app.base_map)),
                 rnum=np.random.randint(0,100000), map_rendered = map_rendered) #if request method was GET
@@ -216,7 +216,7 @@ def time_series():
                                                  app.ts_form.data['grouping_var'],
                                                  sm=sform.data['smooth_span'],
                                                  n_quantiles=app.ts_form.data['num_quantiles'])
-
+    print('script len',len(script))
     return render_template('time_series.html', script=script, div=div, 
                            ts_form=app.ts_form, sform=sform, leg_map=name_legend_map) #if request method was GET
 
