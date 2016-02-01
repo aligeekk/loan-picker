@@ -8,11 +8,6 @@ Created on Fri Dec 18 12:15:09 2015
 import pandas as pd
 import numpy as np
 import sys
-sys.path.append('/Users/james/data_science/census/')
-sys.path.append('/Users/james/data_science/pyzipcode')
-import us
-from pyzipcode import ZipCodeDatabase
-from census import Census
 
 #%% MAPPING FUNCTIONS
 def make_fips_dict(data_path, group_by='zip3'):
@@ -57,7 +52,11 @@ def make_zip_dict(data_dir):
     
 
 def load_location_data(data_dir,group_by='zip3'):
-    """helper function to load coordinates of each 3-digit zip code"""
+     """helper function to load coordinates of each 3-digit zip code"""
+    import us
+    sys.path.append('/Users/james/data_science/pyzipcode')
+    from pyzipcode import ZipCodeDatabase
+
     # Build pandas zip code database with lat/long coordinates
     zcdb = ZipCodeDatabase() #create zipcode database object
     zip_dict = dict([('zip_code',[]),('latitude',[]),('longitude',[]),('state',[])])
@@ -87,6 +86,9 @@ def load_location_data(data_dir,group_by='zip3'):
         
 def load_census_data(census_cols,year=2011):
     """helper function to load desired data from census API"""
+    from census import Census
+    sys.path.append('/Users/james/data_science/census/')
+
     c = Census("f2d6925fe44b6e0740ca0cf1d883deb71f2e58d1") #census key
     income_data = pd.DataFrame(c.acs.get(census_cols.keys(), 
                     {'for': 'zip code tabulation area:*'}, year=year)) #pull data by zip code area
