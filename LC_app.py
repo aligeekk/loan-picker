@@ -162,13 +162,13 @@ def loan_mapping(map_rendered=False):
                                        mform.data['agg_fun'],
                                        state_fips_dict = state_fips_dict, 
                                        min_counts = 50)
-                       
+         print('computed group avgs')              
          data.name = mform.data['col_name']
          if mform.data['agg_fun'] == 'count':
              data.name = 'counts'
          pal = LCH.paint_map(data, app.base_map, app.county_paths, fips_to_zip, 
                              color='cube', agg_fun=mform.data['agg_fun'])        
-         
+         print('painted map')
          # plt.savefig(tmp_dir + 'map_cbar.png', dpi=500, format='png')
          # plt.close()
          
