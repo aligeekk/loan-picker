@@ -2,3 +2,4 @@ gunicorn==19.4.5
 flask==0.10.1
 wtforms==2.0.2
 beautifulsoup4==4.3.2
+us==0.9.1
