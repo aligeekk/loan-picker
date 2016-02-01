@@ -52,7 +52,7 @@ def make_zip_dict(data_dir):
     
 
 def load_location_data(data_dir,group_by='zip3'):
-     """helper function to load coordinates of each 3-digit zip code"""
+    """helper function to load coordinates of each 3-digit zip code"""
     import us
     sys.path.append('/Users/james/data_science/pyzipcode')
     from pyzipcode import ZipCodeDatabase
