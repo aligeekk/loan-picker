@@ -145,7 +145,7 @@ def main():
 # page where user selects desired stock features to plot
 @app.route('/index',methods=['GET'])
 def index():
-    return render_template('cover.html', app_title = app_title) #if request method was GET
+    return redirect('/home')
 
 @app.route('/home',methods=['GET'])
 def home():
