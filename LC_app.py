@@ -69,12 +69,6 @@ class map_form(Form):
                           validators=[DataRequired()],
                           default='ROI')
                           
-    # color_name = RadioField('Label3', choices=[('blue','blue'),
-    #                                            ('red','red'),
-    #                                            ('green','green')],
-    #                                             validators=[DataRequired()],
-    #                                         default='blue')
-
 class ts_form(Form):
     # makes a form for grabbing user input
     grouping_vars = [('loan_status','loan status'),
@@ -113,6 +107,7 @@ class smoothing_form(Form):
 #%%
 data_dir = 'static/data/'
 fig_dir = 'static/images/'
+tmp_dir = 'tmp/'
 data_name = 'all_loans_proc_short'
 LD = pd.read_csv(data_dir + data_name)
 LD['issue_d'] = pd.to_datetime(LD['issue_d'],format = '%Y-%m-%d',unit='D')
@@ -174,7 +169,7 @@ def loan_mapping(map_rendered=False):
          pal = LCH.paint_map(data, app.base_map, app.county_paths, fips_to_zip, 
                              color='cube', agg_fun=mform.data['agg_fun'])        
          
-         plt.savefig(fig_dir + 'map_cbar.png', dpi=500, format='png')
+         plt.savefig(tmp_dir + 'map_cbar.png', dpi=500, format='png')
          plt.close()
          
     return render_template('loan_mapping.html', map_form=mform, svg=Markup(str(app.base_map)),
