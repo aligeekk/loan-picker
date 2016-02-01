@@ -8,9 +8,9 @@ Created on Sat Jan  9 09:59:19 2016
 from flask import Flask, render_template, request, redirect, url_for, Markup
 from wtforms import Form, RadioField, IntegerField, SelectMultipleField, IntegerField
 from wtforms.validators import DataRequired, NumberRange
-#import matplotlib
+import matplotlib
 # Force matplotlib to not use any Xwindows backend.
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
