@@ -11,9 +11,9 @@
 <div class="row">
 	<div class="col-sm-12 blog-main">
 		<div class="blog-post">
-		<p>All analysis was done using Lending Club's publically available loan data, which can be downloaded <b><a href="https://www.lendingclub.com/info/download-data.action">here</a></b>. At the time of this analysis they had data available up through 09/30/15. This dataset consists of 750k loans dating back to 2007. Lending Club assigns each loan a grade based on their risk assessment, which they use to set the interest rate for the loan.</p>
+		<p>All analysis was done using Lending Club's publically available loan data, which can be downloaded <b><a href="https://www.lendingclub.com/info/download-data.action">here</a></b>. This dataset consists of 750k loans dating back to 2007, and at the time of this analysis going up to 09/30/15. Lending Club assigns each loan a grade based on their risk assessment, which they use to set the interest rate for the loan.</p>
 
-		<p>For each loan, we're given about 70 different pieces of information about the loan and the borrower, along with information about the loan's payment history and current status. The older loans that have matured will either have a status of 'fully paid' or they have been 'charged off' (i.e. they have defaulted and the ouststanding principal has been written off). Most of the loans were issued relatively recently, however, and are still ongoing. So, we don't know their 'final outcome', but we're give their current status as either 'current', meaning the borrower is up-to-date on their payments, or they can be at various stages of delinquency. As expected, loans with lower grades (i.e. F) are more likely to be in a delinquent status.</p>
+		<p>For each loan, we're given about 70 different pieces of information about the loan and the borrower, along with information about the loan's payment history and current status. The older loans that have matured will either have a status of 'fully paid' or they will have been 'charged off' (i.e. they will have defaulted and the ouststanding principal will have been written off). Most of the loans were issued relatively recently, however, and are still ongoing. So, we don't know their 'final outcome', but we're give their current status as either 'current', meaning the borrower is up-to-date on their payments, or they can be at various stages of delinquency. As expected, loans with lower grades (i.e. F) are more likely to be in a delinquent status.</p>
 		<div class="row">
 		<div class="col-sm-6">
 		<img src="/static/images/year_cond_dist.png" width="500" class="img-responsive center-block"></img>
@@ -28,7 +28,7 @@
 		<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Calc Exp Returns">
 		<h1 style="padding-top: 50px; margin-top: -50px;" class="blog-title">Measuring loan performance</h1>
 		</a>
-		<p class="lead blog-description">A key first step to developing predictive models of loan outcomes using the Lending Club data is to develop a consistent metric of loan performance that can be applied to both matured and outstanding loans. I estimate the expected annualized returns, as described below.</p>
+		<p class="lead blog-description">A key first step to developing predictive models of loan outcomes using the Lending Club data is to establish a consistent metric of loan performance that can be applied to both matured and outstanding loans. To do this, I used the net annualized returns for 'fully observed' loans, and calculated its expected value conditioned on the available data for 'partially observed loans,' as described below.</p>
 
 	</div>
 
@@ -40,7 +40,7 @@
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Annualized Returns">
 			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Annualized Returns</h2>
 			</a>
-			<p>Calculating returns on matured loans is relatively straightforward, at least using the 'net annualized returns' (NAR) formula used by Lending Club. This simply calculates the percentage return in each month (interest made, minus service fees and principal lost through charge-offs), and then computes an average monthly return, weighted by the outstanding principal in each month. This in then converted into an annualized return by compounding monthly. </p>
+			<p>Calculating returns on matured loans is relatively straightforward, at least with the 'net annualized returns' (NAR) formula used by Lending Club. This simply calculates the percentage return in each month (interest made, minus service fees and principal lost through charge-offs), and then computes an average monthly return, weighted by the outstanding principal in each month. This in then converted into an annualized return by compounding monthly. </p>
 			<img src="/static/images/LC_NAR_formula.png" width="700" class="img-responsive center-block"></img>
 			<p>(Taken from the Lending Club <a href="https://www.lendingclub.com/public/lendersPerformanceHelpPop.action">website</a>)</p>
 		</div>
@@ -49,9 +49,9 @@
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Hazard Functions">
 			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Hazard Functions</h2>
 			</a>
-			<p>For outstanding loans it's more difficult because we don't know what the full payment outcome will be, so we can't directly calculate the NAR. My approach is to use the current status and payment history of each loan to estimate an 'expected' rate of return. To do this I first need to compute the probabiliy that a given loan will go into default at each payment period. These probabilities are described by a 'hazard function', which I estimate for each loan grade, and for each loan term (36 month and 60 month loans).</p>
+			<p>For outstanding loans it's more difficult because we don't know what the full payment outcome will be, so we can't directly calculate the NAR. The approach I took is to use the current status and payment history of each loan to estimate an 'expected' rate of return. To do this I first needed to compute the probabiliy that a given loan will go into default at each payment period. These probabilities are described by a 'hazard function', which I estimate for each loan grade, and for each loan term (36 month and 60 month loans).</p>
 
-			<p>I use the Python module <a href="http://lifelines.readthedocs.org/en/latest/">lifelines</a> to estimate the hazard functions. This analysis shows that riskier loans (lower letter grades) are both more likely to default overall, and are more likely to default earlier in the loan term (the hazard functions are shifted leftwards).</p>
+			<p>I use the Python module <a href="http://lifelines.readthedocs.org/en/latest/">lifelines</a> to estimate the hazard functions, specifically the <a href="https://en.wikipedia.org/wiki/Nelson%E2%80%93Aalen_estimator">Nelson-Aalen estimator</a>. This analysis shows that riskier loans (lower letter grades) are both more likely to default overall, and are more likely to default earlier in the loan term (the hazard functions are shifted leftwards).</p>
 			<img src="/static/images/hazard_funs.png" width="900" class="center-block"></img>
 		</div>
 
@@ -61,9 +61,9 @@
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Expected Returns">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Expected Returns</h2>
 			</a>
-			<p>Given the hazard function for each loan type, estimating the expected return for a given loan is relatively straightforward. We first calculate the average monthly return (<i>MR</i>) that we would recieve if the loan defaulted at each possible payment period <i>MR</i>(<i>default</i><sub><i>i</i></sub>). We can then calculate the weighted average of <i>MR</i>, using the estimated default probabilities at each time point, and convert it into an annualized return.</p>
+			<p>Given the hazard function for each loan type, estimating the expected return for a given loan is relatively straightforward. We first calculate the average monthly return (<i>MR</i>) that we would recieve if the loan defaulted at each possible payment period <i>MR</i>(<i>default</i><sub><i>i</i></sub>). We can then calculate the weighted average of <i>MR</i>, using the estimated default probabilities at each time point, converting it into an annualized return as follows:
 			<center><img src="static/images/expected_returns.png?{{rnum}}" width="500"></img></center>
-			<p>For an outstanding loan, we set the default probabilities to zero for all payments that have already been received. We also use a heuristic strategy to incorporate the reported loan status. Specifically, I use the data Lending Club provides <a href="https://www.lendingclub.com/info/demand-and-credit-profile.action">here</a> (bottom of page) on the average fraction of principal recovered for loans in varying stages of delinquincy. I also assume that if payment is resumed, the loan returns to having its original set of default probabilities for the remainder of its term.</p>
+			For an outstanding loan, we set the default probabilities to zero for all payments that have already been received. We also use a heuristic strategy to incorporate the reported loan status. Specifically, I use the data Lending Club provides <a href="https://www.lendingclub.com/info/demand-and-credit-profile.action">here</a> (bottom of page) on the average fraction of principal recovered for loans in varying stages of delinquency. I also make the (admittedly questionable) assumption that if payment is resumed, the loan returns to having its original set of default probabilities for the remainder of its term.</p>
 			<p>The figures below show how these expected return values depend on both a loan's default probability, as well as its interest rate.</p>
 			
 		<div class="row">
@@ -97,7 +97,6 @@
 			<p>So far I've tried several different models, including linear regression, a linear support vector machine (SVM), gradient tree boosting, and random forests, but I'm looking to test artificial neural network approaches as well. For each model I select key parameters using a cross-validated grid-search. Final performance of each model is then evaluated using 10-fold cross-validation.</p>
 		</div>
 
-
 		<div class="blog-post">
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Portfolio returns">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Estimating returns on loan portfolios</h2>
@@ -112,7 +111,7 @@
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Decision tree">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Visualizing decision tree regression</h2>
 			</a>
-			<p>To illustrate how decision-tree regression works, I made an animation showing how the model-predicted loan returns vary as function of the borrower's county when I use a decision tree with increasing 'tree depth'. As the decision tree depth increases, the number of 'partitions' of the input space, within which the model can estimate separate average returns, increases exponentially. For a random forest, we're basically estimating many such decision trees in parallel (using random samples of the datapoints and features), and then taking the average output over trees as our prediction.</p>
+			<p>To illustrate how decision-tree regression works, I made an animation showing how the model-predicted loan returns vary as function of the borrower's geographic location when using a decision tree with increasing 'tree depth'. As the decision tree depth increases, the number of 'partitions' of the input space, within which the model can estimate separate average returns, increases exponentially. For a random forest, we're basically estimating many such decision trees in parallel (using random samples of the datapoints and features), and then taking the average output over trees as our prediction.</p>
 			<video class="img-responsive center-block" width="600" controls>
  			 <source src="/static/movies/tree_movie.mp4?{{rnum}}" type="video/mp4">
 			Your browser does not support the video tag.
