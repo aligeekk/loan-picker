@@ -59,7 +59,7 @@
 			</a>
 			<p>Given the hazard function for each loan type, estimating the expected return for a given loan is relatively straightforward. We first calculate the average monthly return (<i>MR</i>) that we would recieve if the loan defaulted at each possible payment period <i>MR</i>(<i>default</i><sub><i>i</i></sub>). We can then calculate the weighted average of <i>MR</i>, using the estimated default probabilities at each time point, and convert it into an annualized return.</p>
 			<center><img src="static/images/expected_returns.png?{{rnum}}" width="500"></img></center>
-			<p>For an outstanding loan, we set the default probabilities to 0 for all payments that have already been received. We also use a heuristic strategy to incorporate the reported loan status. Specifically, I use the data Lending Club provides <a href="https://www.lendingclub.com/info/demand-and-credit-profile.action">here</a> (bottom of page) on the average fraction of principal recovered for loans in varying stages of delinquincy. I also assume that if payment is resumed, the loan returns to having its original set of default probabilities for the remainder of its term.</p>
+			<p>For an outstanding loan, we set the default probabilities to zero for all payments that have already been received. We also use a heuristic strategy to incorporate the reported loan status. Specifically, I use the data Lending Club provides <a href="https://www.lendingclub.com/info/demand-and-credit-profile.action">here</a> (bottom of page) on the average fraction of principal recovered for loans in varying stages of delinquincy. I also assume that if payment is resumed, the loan returns to having its original set of default probabilities for the remainder of its term.</p>
 			<p>The figures below show how these expected return values depend on both a loan's default probability, as well as its interest rate.</p>
 			
 		<div class="row">
@@ -70,7 +70,6 @@
 			<img src="/static/images/int_ROI_joints.png?{{rnum}}" width="400" class="center-block"></img>
 		</div>
 	</div>
-			<p>** Explanation **.</p>
 			<img src="/static/images/returns_box.png?{{rnum}}" width="500" class="center-block"></img>
 		</div>
 	</div>
@@ -82,7 +81,7 @@
 	<a style="pointer-events: none; cursor: default;" name="Modeling Details">
 		<h1 style="padding-top: 50px; margin-top: -50px;"  class="blog-title">Modeling Details</h1>
 		</a>
-		<p class="lead blog-description">CONTAINER FOR MODELING DETAILS</p>
+		<p class="lead blog-description">I treat predicting loan returns as a regression problem, with the target variable being the ROI of each loan. This gives a more fine-grained analysis than simply predicting whether or not a loan will default.</p>
 
 	<div class="row">
 		<div class="col-sm-12 blog-main">
@@ -113,7 +112,7 @@
 			<a style="pointer-events: none; cursor: default;" name="Portfolio returns">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Estimating returns on loan portfolios</h2>
 			</a>
-			<p>Above we measure model performance using R2, or the fraction of variance in the annualized loan returns captured by our model predictions. A more useful measure of model performance would quantify the returns on a portfolio of loans selected using a particular strategy. To do this, we can estimate the returns on investment portfolios with K loans, where we select the top K loans predicted by our model (see [link] for details on estimating portfolio returns). </p>
+			<p>Above we measure model performance using R2, or the fraction of variance in the annualized loan returns captured by our model predictions. A more useful measure of model performance would quantify the returns on a portfolio of loans selected using a particular strategy. To do this, we can estimate the returns on investment portfolios with <i>K</i> loans, where we select the top <i>K</i> loans predicted by our model. </p>
 				<img class="img-responsive center-block" src="/static/images/loan_pred_examp.png?{{rnum}}" width="500"></img>
 		</div>
 

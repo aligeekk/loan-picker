@@ -33,7 +33,7 @@ name_legend_map = {'counts': 'Number of loans (thousands)',
                     'annual_inc':'annual income ($)'}
 
 #%%
-app_title = 'Loan Explorer'
+app_title = 'Loan Picker'
 app = Flask(__name__)
 app.secret_key = '\xb6\xbcr\xc4\xb5\x9cY\x03\xcdI\x15oR:\xdbJD\xb1c\x00+\x1c\x926'
 
