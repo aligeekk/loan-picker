@@ -23,7 +23,7 @@ from collections import defaultdict, namedtuple
 import datetime
 
 #base_dir = os.path.dirname(os.path.realpath(__file__))
-base_dir = '/Users/james/Data_Incubator/LC_app'
+base_dir = '/Users/james/Data_Incubator/loan-picker'
     
 sys.path.append(base_dir)
 import LC_helpers as LCH
@@ -225,7 +225,7 @@ plt.plot(poss_choose_K, q_bands.T,'y',lw=2,zorder=10002)
 plt.xscale('log')
 plt.xlim(min(poss_choose_K),max(poss_choose_K))
 plt.xlabel('Number of loans selected',fontsize=14)
-plt.ylabel('Estimated ROI (%)',fontsize=14)
+plt.ylabel('Estimated annual returns (%)',fontsize=14)
 plt.ylim(-15,25)
 plt.axhline(y=0,color='k',ls='dashed')
 ax.set_xticks(np.concatenate((np.arange(10,100,10),np.arange(100,1100,100)),axis=0))

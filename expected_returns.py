@@ -20,8 +20,8 @@ import LC_loading as LCL
 
 #%%
 data_dir = '/Users/james/Data_Incubator/LC_analysis/Data/'
-fig_dir = '/Users/james/Data_Incubator/LC_app/static/images/'
-temp_data_dir = '/Users/james/Data_Incubator/LC_app/static/data/'
+fig_dir = '/Users/james/Data_Incubator/loan-picker/static/images/'
+temp_data_dir = '/Users/james/Data_Incubator/loan-picker/static/data/'
 
 """
 possible files:  {'LoanStats3a.csv': '2007-2011',
@@ -310,11 +310,12 @@ if print_figs:
   
 #%% total dollar issuance by years
 if print_figs:
+    LD['year'] = LD['issue_d'].dt.year
     last_2015_loan = LD.ix[LD.year==2015,'issue_d'].dt.month.max()
     obs_frac_2015 = last_2015_loan/12.0
     
-    tot_by_year = LD.groupby('year').agg({'funded_amnt':'sum'}) #cuisine-conditional violations counts
-    tot_by_year = tot_by_year/int(1e9)
+    tot_by_year = LD.groupby('year').agg({'funded_amnt':'count'}) #cuisine-conditional violations counts
+    tot_by_year = tot_by_year/int(1e3)
     tot_by_year.ix[2015] = tot_by_year.ix[2015].values/obs_frac_2015
     
     tot_by_year.reset_index(inplace=True)
@@ -322,12 +323,12 @@ if print_figs:
     sns.barplot("year", y="funded_amnt", data=tot_by_year,
                      palette="Blues", ax=ax)
     
-    ax.set_ylabel('Loan issuance (billions USD)',fontsize=16)
+    ax.set_ylabel('Loans issued (thousands)',fontsize=16)
     ax.set_xlabel('Year',fontsize=16)
     locs, labels = plt.xticks()
     plt.setp(labels, rotation=70)
     plt.tight_layout()
-    plt.savefig(fig_dir + 'tot_loan_issuance.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'tot_loans.png', dpi=500, format='png')
     plt.close()
 
 #%% PLOT EXAMPLE PAYMENT PROB PLOT

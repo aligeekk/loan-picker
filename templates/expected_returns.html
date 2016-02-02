@@ -47,7 +47,7 @@
 			</a>
 			<p>For outstanding loans it's more difficult because we don't know what the full payment outcome will be, so we can't directly calculate the NAR. My approach is to use the current status and payment history of each loan to estimate an 'expected' rate of return. To do this I first need to compute the probabiliy that a given loan will go into default at each payment period. These probabilities are described by a 'hazard function', which I estimate for each loan grade, and for each loan term (36 month and 60 month loans).</p>
 
-			<p>I use the Python module <a href="http://lifelines.readthedocs.org/en/latest/">lifelines</a> to estimate the hazard functions. This analysis shows that riskier loans (higher letter grades) are both more likely to default overall, and are more likely to default earlier in the loan term (the hazard functions are shifted leftwards).</p>
+			<p>I use the Python module <a href="http://lifelines.readthedocs.org/en/latest/">lifelines</a> to estimate the hazard functions. This analysis shows that riskier loans (lower letter grades) are both more likely to default overall, and are more likely to default earlier in the loan term (the hazard functions are shifted leftwards).</p>
 			<img src="/static/images/hazard_funs.png" width="900" class="center-block"></img>
 		</div>
 
