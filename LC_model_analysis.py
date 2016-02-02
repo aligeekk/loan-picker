@@ -340,7 +340,7 @@ ax.annotate('Random Picking', xy=(xcent, np.mean(marg_returns)), xycoords='data'
                 size=14)
 group_titles = ['Linear\nModel',
              'Linear SVM',
-             'Gradident\nBoosting',
+             'Gradient\nBoosting',
              'Random\nForest']
 ax.set_xticklabels(group_titles, rotation=90, fontsize=13)
 ax.legend(loc='lower right')
