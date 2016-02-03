@@ -241,3 +241,5 @@ class log_minmax(sklearn.base.BaseEstimator,
     def fit_transform(self, X, y=None):
         self.fit(X)
         return self.transform(X)
+
+#%%

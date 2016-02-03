@@ -162,9 +162,9 @@ def load_lending_data(file_names,keep_status=None,keep_terms=None,keep_grades=No
     data_month,data_year = (9, 2015)  #date sampled from this (M,Y)
     LD['loan_age'] = data_month + data_year*12 - issue_months
     
-    mth_col = ['mths_since_last_delinq','mths_since_last_major_derog',
-               'collections_12_mths_ex_med','mths_since_last_record']
-    LD[mth_col] = LD[mth_col].fillna(0)
+    mth_col = ['mths_since_last_delinq','mths_since_last_major_derog','mths_since_last_record']
+    LD[mth_col] = LD[mth_col].fillna(200) #this is about 1 SD above the max non-nan value.
+    LD['collections_12_mths_ex_med'] = LD['collections_12_mths_ex_med'].fillna(0) #may want to think about how to handle these better
         
     LD['cr_line_dur'] = LD['issue_d'] - LD['earliest_cr_line']
     LD['cr_line_dur'] = LD['cr_line_dur'].dt.days

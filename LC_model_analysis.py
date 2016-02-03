@@ -1,6 +1,6 @@
 import os
 import sys
-
+import re
 # Force matplotlib to not use any Xwindows backend.
 import matplotlib
 matplotlib.use('Agg')
@@ -15,6 +15,7 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.cross_validation import ShuffleSplit, KFold
+from sklearn.feature_extraction import DictVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.svm import SVR, LinearSVR
 from sklearn.grid_search import GridSearchCV
@@ -24,8 +25,8 @@ import datetime
 
 plot_figures = True
 run_CV = False
-base_dir = os.path.dirname(os.path.realpath(__file__))
-#base_dir = '/Users/james/Data_Incubator/LC_app'
+#base_dir = os.path.dirname(os.path.realpath(__file__))
+base_dir = '/Users/james/Data_Incubator/loan-picker'
     
 sys.path.append(base_dir)
 import LC_helpers as LCH
@@ -50,7 +51,14 @@ LD = pd.merge(LD,zip3_data,how='inner', left_on='zip3', right_index=True)
 #%%
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 
-ordinal_preds = [
+transformer_map = {'minMax':MinMaxScaler(),
+                   'maxAbs':MaxAbsScaler(),
+                   'standScal':StandardScaler(),
+                   'log_minmax': LCM.log_minmax(),
+                   'robScal':RobustScaler()
+                   }
+
+predictors = [
             predictor('acc_now_delinq','num delinq accounts','maxAbs'),
             predictor('annual_inc','annual income','log_minmax'),
             predictor('collections_12_mths_ex_med','num recent collections','maxAbs'),
@@ -74,29 +82,15 @@ ordinal_preds = [
             predictor('term','loan duration','maxAbs'),
             predictor('total_acc','num accounts','robScal'),
             predictor('tot_cur_bal','total balance','log_minmax'),
-                ]
-
-categorical_preds = [
             predictor('addr_state', 'borrower state','cat'),
             predictor('home_ownership', 'home ownership','cat'),
             predictor('grade','loan grade','cat'),
             predictor('purpose','loan purpose','cat'),
             predictor('verification_status','verification status','cat'),
-                    ]                     
+            predictor('latitude','latitude','minMax'),
+            predictor('longitude','longitude','minMax')
+            ]
 
-grouped_preds = [
-                ('borrower location',
-                [predictor('latitude','latitude','minMax'),
-                predictor('longitude','longitude','minMax')])
-                ]
-
-transformer_map = {'minMax':MinMaxScaler(),
-                   'maxAbs':MaxAbsScaler(),
-                   'standScal':StandardScaler(),
-                    'log_minmax': LCM.log_minmax(),
-                    'robScal':RobustScaler()}
-
-                   
 #%%
 response_var = 'ROI'
 y = LD[response_var].values  # response variable
@@ -105,43 +99,24 @@ weight_y = (LD['mnthly_ROI'] * LD['exp_num_pymnts']).values #duration-weighted r
     
 LD.fillna(0, inplace=True)
 
-col_dict = {}
-col_types = {}
-col_titles = {}
-X = np.zeros((len(y), len(ordinal_preds)))            
-for idx, pred in enumerate(ordinal_preds):
-    data = LD[pred.col_name].values.reshape(-1,1)
-    cur_pred = transformer_map[pred.norm_type].fit_transform(data)
-    X[:,idx] = cur_pred.squeeze() 
-    col_dict[pred.col_name] = [idx]
-    col_types[pred.col_name] = 'ord'
-    col_titles[pred.col_name] = pred.full_name
-    
-
-#add in grouped predictor variables
-for group_name, pred_list in grouped_preds:
-    col_dict[group_name] = np.arange(len(pred_list)) + X.shape[1]
-    col_types[group_name] = 'ord'
-    col_titles[group_name] = group_name
-    for pred in pred_list:
-        data = LD[pred.col_name].values.reshape(-1,1)
-        cur_pred = transformer_map[pred.norm_type].fit_transform(data)       
-        X = np.concatenate((X, cur_pred), axis=1)
-
-#add in categorical variables
-for cat_pred in categorical_preds: # add categorical predictors
-    dummyX = pd.get_dummies(LD[cat_pred.col_name])
-    col_dict[cat_pred.col_name] = np.arange(dummyX.shape[1]) + X.shape[1]
-    col_types[cat_pred.col_name] = 'cat'
-    col_titles[cat_pred.col_name] = cat_pred.full_name
-    X = np.concatenate((X, dummyX.values), axis=1)
-
-all_preds = categorical_preds + ordinal_preds
-all_pred_cnames = [pred.col_name for pred in all_preds]
-for gname, gpred in grouped_preds:
-    all_pred_cnames.append(gname)
-
-
+print('Transforming data')
+use_cols = [pred.col_name for pred in predictors]
+col_titles = {pred.col_name:pred.full_name for pred in predictors}
+recs = LD[use_cols].to_dict(orient='records') #convert to list of dicts
+dict_vect = DictVectorizer(sparse=False)
+X = dict_vect.fit_transform(recs)                  
+print('Done')
+#%%
+feature_names = dict_vect.get_feature_names()
+col_dict = defaultdict(list)
+for idx, feature_name in enumerate(feature_names):
+    short_name = re.findall('[^=]*',feature_name)[0] #get the part before the equals sign, if there is onee
+    col_dict[short_name].append(idx)
+    pidx = use_cols.index(short_name)
+    if predictors[pidx].norm_type in transformer_map:
+        tran = transformer_map[predictors[pidx].norm_type]
+        X[:,idx] = tran.fit_transform(X[:,idx].reshape(-1,1)).squeeze()
+        
 #%% COMPILE LIST OF MODELS TO COMPARE
     
 Lin_est = Ridge()
@@ -239,7 +214,7 @@ for train, test in kf:
      test_pred = model.predict(X[test,:])
 
      if name == 'RF': #test feature importance for RF model
-         for col_name in all_pred_cnames:
+         for col_name in use_cols:
              Xshuff = X[test,:].copy()
              col_idx = col_dict[col_name]
              obj = slice(col_idx[0],col_idx[-1]+1)
@@ -326,7 +301,7 @@ pal = sns.color_palette("muted")
 plt.figure(figsize=(8.0,6.0))
 ax = sns.violinplot(x='variable',y='value',data=df, hue='Loans selected',
                  split=False, width=factor_width,
-                 order = ['Lin','Lin_SVR','GBR', 'RF'],
+                 order = ['Null','Lin','Lin_SVR','GBR', 'RF'],
                 linewidth=0.5)
 plt.ylabel('Annual returns (%)',fontsize=16)
 plt.xlabel('Selection method',fontsize=16)
@@ -352,7 +327,7 @@ plt.tight_layout()
 n_groups = len(pick_K_list)
 pal = sns.color_palette("muted")
 medians = df.groupby(['variable','Loans selected'])['value'].median()
-medians = medians.ix[['Lin','Lin_SVR','GBR','RF']]
+medians = medians.ix[['Null','Lin','Lin_SVR','GBR','RF']]
 for idx, pick_N in enumerate(pick_K_list):
     plt.plot(np.arange(len(group_titles)) + idx*factor_width/n_groups - np.ceil(n_groups/2)*factor_width/n_groups,
              medians.ix[:,pick_N],ls='dashed',lw=1,color=pal[idx], alpha=0.5,
