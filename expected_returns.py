@@ -10,7 +10,7 @@ import pandas as pd
 import seaborn as sns
 from lifelines import NelsonAalenFitter
 
-base_dir = '/Users/james/Data_Incubator/LC_app'
+base_dir = '/Users/james/Data_Incubator/loan-picker'
 #base_dir = os.path.dirname(os.path.realpath(__file__))
 
 import sys
