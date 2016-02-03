@@ -75,7 +75,6 @@ class ts_form(Form):
                      ('term','loan duration'),                    
                      ('home_ownership','home ownership'),
                      ('grade','loan grade'),
-                     ('issue_year','issue year'),
                      ('short_purpose','loan purpose'),
                      ('quantiles','quantiles')]
                      
