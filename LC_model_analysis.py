@@ -201,7 +201,7 @@ else:
 
 
 #%%
-model_set = [('Null',rand_pick_mod()),
+model_set = [('Null',LCM.rand_pick_mod()),
              ('Lin', Lin_model),
              ('Lin_SVR',SVR_model),
              ('GBR',GBR_model),
@@ -222,6 +222,7 @@ unique_grades = sorted(LD[grade_group].unique())
 train_R2 = defaultdict(list)
 test_R2 = defaultdict(list)
 returns = defaultdict(list)
+marg_returns = []
 grade_returns = defaultdict(list)
 RF_feature_imp = defaultdict(list)
 grade_makeup = {name:np.zeros((len(kf),len(unique_grades))) for name,_ in model_set}
