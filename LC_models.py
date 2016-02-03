@@ -153,6 +153,21 @@ class marg_avg_mod(sklearn.base.BaseEstimator, sklearn.base.RegressorMixin):
     def score(self, X, y):
         return sklearn.metrics.r2_score(y, self.predict(X))
 
+class rand_pick_mod(sklearn.base.BaseEstimator, sklearn.base.RegressorMixin):
+    '''define a null model that just makes random predictions'''
+    def __init__(self):
+        pass
+
+    def fit(self, X, y=None):
+        return self
+
+    def predict(self, X):
+        n_pts = len(X)
+        prediction = np.random.rand(n_pts)
+        return prediction
+
+    def score(self, X, y):
+        return sklearn.metrics.r2_score(y, self.predict(X))
 
 # TRANSFORMER DEFINITIONS
 # class make_dummies(sklearn.base.BaseEstimator,

@@ -34,7 +34,8 @@ import LC_models as LCM
 
 #set paths
 data_dir = os.path.join(base_dir,'static/data/')
-fig_dir = os.path.join(base_dir,'static/images/')
+#fig_dir = os.path.join(base_dir,'static/images/')
+fig_dir = os.path.join(base_dir,'tmp/')
 movie_dir = os.path.join(base_dir,'static/movies/')
 
 #%%
@@ -200,7 +201,8 @@ else:
 
 
 #%%
-model_set = [('Lin', Lin_model),
+model_set = [('Null',rand_pick_mod()),
+             ('Lin', Lin_model),
              ('Lin_SVR',SVR_model),
              ('GBR',GBR_model),
              ('RF', RF_model)]
@@ -221,7 +223,6 @@ train_R2 = defaultdict(list)
 test_R2 = defaultdict(list)
 returns = defaultdict(list)
 grade_returns = defaultdict(list)
-marg_returns = []
 RF_feature_imp = defaultdict(list)
 grade_makeup = {name:np.zeros((len(kf),len(unique_grades))) for name,_ in model_set}
 cnt = 0
@@ -338,10 +339,11 @@ ax.annotate('Random Picking', xy=(xcent, np.mean(marg_returns)), xycoords='data'
                 arrowprops=dict(facecolor='black', shrink=0.05, width=3),
                 horizontalalignment='right', verticalalignment='bottom',
                 size=14)
-group_titles = ['Linear\nModel',
-             'Linear SVM',
-             'Gradient\nBoosting',
-             'Random\nForest']
+group_titles = ['Random\nPicking',
+                'Linear\nModel',
+                'Linear SVM',
+                'Gradient\nBoosting',
+                'Random\nForest']
 ax.set_xticklabels(group_titles, rotation=90, fontsize=13)
 ax.legend(loc='lower right')
 plt.tight_layout()
@@ -390,9 +392,9 @@ jitt_x = 0.6
 alpha = 0.75
 #err_norm = np.sqrt(n_folds)
 err_norm = 1.0
-mod_list = ['Lin','Lin_SVR','GBR','RF']
+mod_list = ['Null','Lin','Lin_SVR','GBR','RF']
 n_mods = len(mod_list)
-mod_names = ['Linear','Linear SVR','Gradient Boosting','Random Forest']
+mod_names = ['Random','Linear','Linear SVR','Gradient Boosting','Random Forest']
 fig = plt.figure(figsize=(6.0,5.0))
 ax = plt.subplot(1,1,1)
 for idx, mod_name in enumerate(mod_list):
