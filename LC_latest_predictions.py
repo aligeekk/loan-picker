@@ -32,7 +32,7 @@ predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 with open(os.path.join(base_dir,'static/data/LC_model.pkl'),'rb') as in_strm:
     RF_est = dill.load(in_strm)
     
-with open(os.path.join(base_dir,'static/data/dict_vect.pkl'),'rb') as in_strm:
+with open(os.path.join(base_dir,'static/data/trans_tuple.pkl'),'rb') as in_strm:
     dict_vect, col_dict, tran_dict, predictors = dill.load(in_strm)
 
 zip3_data = LCL.load_location_data(data_dir,group_by='zip3')        
@@ -133,7 +133,7 @@ records = [make_record(loan, record_map) for loan in loans]
 #%%
 X_rec = dict_vect.transform(records)
 
-use_cols = [pred.col_name for pred in dict_vect.predictors]
+use_cols = [pred.col_name for pred in predictors]
 feature_names = dict_vect.get_feature_names()
 for idx, feature_name in enumerate(feature_names):
     short_name = re.findall('[^=]*',feature_name)[0] #get the part before the equals sign, if there is onee

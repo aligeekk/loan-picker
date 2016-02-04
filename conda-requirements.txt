@@ -3,4 +3,4 @@ bokeh=0.10.0
 matplotlib
 seaborn
 numpy
-sklearn
+scikit-learn
