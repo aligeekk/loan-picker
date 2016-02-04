@@ -15,6 +15,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.feature_extraction import DictVectorizer
+from sklearn.base import clone
 from sklearn.pipeline import Pipeline
 from sklearn.grid_search import GridSearchCV
 
@@ -110,7 +111,7 @@ for idx, feature_name in enumerate(feature_names):
     col_dict[short_name].append(idx)
     pidx = use_cols.index(short_name)
     if predictors[pidx].norm_type in transformer_map:
-        tran_dict[use_cols[pidx]] = transformer_map[predictors[pidx].norm_type]
+        tran_dict[short_name] = clone(transformer_map[predictors[pidx].norm_type])
         X[:,idx] = tran_dict[use_cols[pidx]].fit_transform(X[:,idx].reshape(-1,1)).squeeze()
 
 transformer_tuple = (dict_vect, col_dict, tran_dict, predictors)
