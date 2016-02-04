@@ -28,24 +28,18 @@ import dill
 import requests
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 
-transformer_map = {'minMax':MinMaxScaler(),
-                   'maxAbs':MaxAbsScaler(),
-                   'standScal':StandardScaler(),
-                   'log_minmax': LCM.log_minmax(),
-                   'robScal':RobustScaler()
-                   }
-
 #%%
 with open(os.path.join(base_dir,'static/data/LC_model.pkl'),'rb') as in_strm:
     RF_est = dill.load(in_strm)
     
 with open(os.path.join(base_dir,'static/data/dict_vect.pkl'),'rb') as in_strm:
-    dict_vect = dill.load(in_strm)
+    dict_vect, col_dict, tran_dict, predictors = dill.load(in_strm)
 
 zip3_data = LCL.load_location_data(data_dir,group_by='zip3')        
  
 #%%
-header = {'Authorization' : 'CL8mtxpJKxUjSpgjunpqV0nE1Xo=', 'Content-Type': 'application/json'}
+header = {'Authorization' : 'CL8mtxpJKxUjSpgjunpqV0nE1Xo=', 
+          'Content-Type': 'application/json'}
 apiVersion = 'v1'
 loanListURL = 'https://api.lendingclub.com/api/investor/' + apiVersion + \
         '/loans/listing'
@@ -144,9 +138,9 @@ feature_names = dict_vect.get_feature_names()
 for idx, feature_name in enumerate(feature_names):
     short_name = re.findall('[^=]*',feature_name)[0] #get the part before the equals sign, if there is onee
     pidx = use_cols.index(short_name)
-    if dict_vect.predictors[pidx].norm_type in transformer_map:
-        tran = transformer_map[predictors[pidx].norm_type]
-        X_rec[:,idx] = tran.fit_transform(X_rec[:,idx].reshape(-1,1)).squeeze()
+    if short_name in tran_dict:
+        tran = tran_dict[short_name]
+        X_rec[:,idx] = tran.transform(X_rec[:,idx].reshape(-1,1)).squeeze()
 
 #%%
 pred_returns = RF_est.predict(X_rec)

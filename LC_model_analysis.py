@@ -106,17 +106,20 @@ recs = LD[use_cols].to_dict(orient='records') #convert to list of dicts
 dict_vect = DictVectorizer(sparse=False)
 X = dict_vect.fit_transform(recs)                  
 print('Done')
+
 #%%
 feature_names = dict_vect.get_feature_names()
 col_dict = defaultdict(list)
+tran_dict = {}
 for idx, feature_name in enumerate(feature_names):
     short_name = re.findall('[^=]*',feature_name)[0] #get the part before the equals sign, if there is onee
     col_dict[short_name].append(idx)
     pidx = use_cols.index(short_name)
     if predictors[pidx].norm_type in transformer_map:
-        tran = transformer_map[predictors[pidx].norm_type]
-        X[:,idx] = tran.fit_transform(X[:,idx].reshape(-1,1)).squeeze()
-        
+        tran_dict[use_cols[pidx]] = transformer_map[predictors[pidx].norm_type]
+        X[:,idx] = tran_dict[use_cols[pidx]].fit_transform(X[:,idx].reshape(-1,1)).squeeze()
+
+dict_vect.tran_dict = tran_dict
 #%% COMPILE LIST OF MODELS TO COMPARE
     
 Lin_est = Ridge()
