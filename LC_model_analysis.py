@@ -25,8 +25,8 @@ import datetime
 
 plot_figures = True
 run_CV = False
-#base_dir = os.path.dirname(os.path.realpath(__file__))
-base_dir = '/Users/james/Data_Incubator/loan-picker'
+base_dir = os.path.dirname(os.path.realpath(__file__))
+#base_dir = '/Users/james/Data_Incubator/loan-picker'
     
 sys.path.append(base_dir)
 import LC_helpers as LCH
@@ -313,7 +313,7 @@ plt.ylim(0,30)
 xlim = plt.xlim()
 xcent = np.mean(xlim)
 ax.axhline(y=np.mean(marg_returns),color=pal[4],lw=3,ls='dashed')
-ax.annotate('Random Picking', xy=(xcent, np.mean(marg_returns)), xycoords='data',
+ax.annotate('Average returns', xy=(xcent, np.mean(marg_returns)), xycoords='data',
                 xytext=(-10, -50), textcoords='offset points', 
                 arrowprops=dict(facecolor='black', shrink=0.05, width=3),
                 horizontalalignment='right', verticalalignment='bottom',
@@ -365,15 +365,15 @@ avg_Gint_rates = LD.groupby(grade_group)['int_rate'].mean()
 avg_Gint_rates.sort_index(inplace=True)
 best_returns = 100 * ((avg_Gint_rates/100/12 + 1) ** 12 - 1)
 
-pal = sns.color_palette("muted", n_colors=4)
+mod_list = ['Null','Lin','Lin_SVR','GBR','RF']
+n_mods = len(mod_list)
+mod_names = ['Random','Linear','Linear SVR','Gradient Boosting','Random Forest']
+pal = sns.color_palette("muted", n_colors=len(mod_list))
 
 jitt_x = 0.6
 alpha = 0.75
 #err_norm = np.sqrt(n_folds)
 err_norm = 1.0
-mod_list = ['Null','Lin','Lin_SVR','GBR','RF']
-n_mods = len(mod_list)
-mod_names = ['Random','Linear','Linear SVR','Gradient Boosting','Random Forest']
 fig = plt.figure(figsize=(6.0,5.0))
 ax = plt.subplot(1,1,1)
 for idx, mod_name in enumerate(mod_list):
