@@ -100,21 +100,21 @@ recs = LD[use_cols].to_dict(orient='records') #convert to list of dicts
 dict_vect = DictVectorizer(sparse=False)
 X = dict_vect.fit_transform(recs)                  
 print('Done')
-dict_vect.predictors = predictors
 
 #%%
 feature_names = dict_vect.get_feature_names()
 col_dict = defaultdict(list)
+tran_dict = {}
 for idx, feature_name in enumerate(feature_names):
     short_name = re.findall('[^=]*',feature_name)[0] #get the part before the equals sign, if there is onee
     col_dict[short_name].append(idx)
     pidx = use_cols.index(short_name)
     if predictors[pidx].norm_type in transformer_map:
-        tran = transformer_map[predictors[pidx].norm_type]
-        X[:,idx] = tran.fit_transform(X[:,idx].reshape(-1,1)).squeeze()
+        tran_dict[use_cols[pidx]] = transformer_map[predictors[pidx].norm_type]
+        X[:,idx] = tran_dict[use_cols[pidx]].fit_transform(X[:,idx].reshape(-1,1)).squeeze()
 
-dict_vect.col_dict = col_dict  
-      
+transformer_tuple = (dict_vect, col_dict, tran_dict, predictors)
+
 #%% COMPILE LIST OF MODELS TO COMPARE
 
 max_depth=14 #16
@@ -132,5 +132,5 @@ RF_est.fit(X,y)
 with open(os.path.join(base_dir,'static/data/LC_model.pkl'),'wb') as out_strm:
     dill.dump(RF_est, out_strm)
     
-with open(os.path.join(base_dir,'static/data/dict_vect.pkl'),'wb') as out_strm:
-    dill.dump(dict_vect, out_strm)
+with open(os.path.join(base_dir,'static/data/trans_tuple.pkl'),'wb') as out_strm:
+    dill.dump(transformer_tuple, out_strm)
