@@ -18,6 +18,7 @@ from sklearn.feature_extraction import DictVectorizer
 from sklearn.base import clone
 from sklearn.pipeline import Pipeline
 from sklearn.grid_search import GridSearchCV
+from sklearn.cross_validation import ShuffleSplit
 
 from collections import defaultdict, namedtuple
 import datetime
@@ -40,10 +41,6 @@ data_dir = os.path.join(base_dir,'static/data/')
 data_name = 'all_loans_proc'
 LD = pd.read_csv(data_dir + data_name, parse_dates=['issue_d',])
 
-#load long/lat data for each zip-code
-zip3_data = LCL.load_location_data(data_dir,group_by='zip3')        
-LD = pd.merge(LD,zip3_data,how='inner', left_on='zip3', right_index=True)
-
 #%%
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 
@@ -63,14 +60,15 @@ predictors = [
             predictor('desc_length', 'loan desc length','maxAbs'),
             predictor('dti', 'debt-income ratio','standScal'),
             predictor('emp_length', 'employment length','maxAbs'),
-            predictor('funded_amnt','loan amount','maxAbs'),
+#            predictor('funded_amnt','loan amount','maxAbs'),
+            predictor('loan_amnt','loan amount','maxAbs'),
             predictor('inq_last_6mths', 'num recent inqs','maxAbs'),
             predictor('int_rate', 'interest rate','maxAbs'),
 #            predictor('issue_day', 'issue date','maxAbs'),
             predictor('mths_since_last_delinq','mths since delinq','maxAbs'),
             predictor('mths_since_last_major_derog','mths since derog','maxAbs'),
             predictor('mths_since_last_record','mths since rec','maxAbs'),
-            predictor('num_add_desc','num descripts added','maxAbs'),
+#            predictor('num_add_desc','num descripts added','maxAbs'),
             predictor('open_acc','num open accounts','robScal'),
             predictor('pub_rec', 'num pub rec','robScal'),
             predictor('revol_bal','revolv cred bal','robScal'),
@@ -107,7 +105,7 @@ feature_names = dict_vect.get_feature_names()
 col_dict = defaultdict(list)
 tran_dict = {}
 for idx, feature_name in enumerate(feature_names):
-    short_name = re.findall('[^=]*',feature_name)[0] #get the part before the equals sign, if there is onee
+    short_name = re.findall('[^=]*',feature_name)[0] #get the part before the equals sign, if there is one
     col_dict[short_name].append(idx)
     pidx = use_cols.index(short_name)
     if predictors[pidx].norm_type in transformer_map:
@@ -116,15 +114,19 @@ for idx, feature_name in enumerate(feature_names):
 
 transformer_tuple = (dict_vect, col_dict, tran_dict, predictors)
 
+#%%
+with open(os.path.join(base_dir,'static/data/trans_tuple.pkl'),'wb') as out_strm:
+    dill.dump(transformer_tuple, out_strm)
+    
 #%% COMPILE LIST OF MODELS TO COMPARE
-
 max_depth=14 #16
 min_samples_leaf=50
 min_samples_split=100
 n_trees=100 #100
 RF_est = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth, 
                                min_samples_leaf=min_samples_leaf, 
-                               min_samples_split=min_samples_split,n_jobs=4)
+                               min_samples_split=min_samples_split,n_jobs=4, 
+                               max_features='auto')
 
 #%%   
 RF_est.fit(X,y)
@@ -133,5 +135,28 @@ RF_est.fit(X,y)
 with open(os.path.join(base_dir,'static/data/LC_model.pkl'),'wb') as out_strm:
     dill.dump(RF_est, out_strm)
     
-with open(os.path.join(base_dir,'static/data/trans_tuple.pkl'),'wb') as out_strm:
-    dill.dump(transformer_tuple, out_strm)
+#%% Now get a reference set of cross-validated tuples of (pred, weight_obs, dur)
+#split_date = datetime.datetime(2015,01,01)
+#train = (LD['issue_d'] < split_date).values
+#test = (LD['issue_d'] >= split_date).values
+test_size = 0.33
+SS = ShuffleSplit(len(LD), n_iter=1, test_size=test_size, random_state=0)
+train, test = list(SS)[0]
+
+RF_xval = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth, 
+                               min_samples_leaf=min_samples_leaf, 
+                               min_samples_split=min_samples_split,n_jobs=4,
+                               max_features='auto')
+
+RF_xval.fit(X[train],y[train])
+test_pred = RF_xval.predict(X[test])
+test_weight_y = weight_y[test]
+test_Npymnts = Npymnts[test]
+
+val_set = zip(test_pred, test_weight_y, test_Npymnts)
+val_set = sorted(val_set, reverse=True)
+
+#%%
+with open(os.path.join(base_dir,'static/data/LC_test_res.pkl'),'wb') as out_strm:
+    dill.dump(val_set, out_strm)
+

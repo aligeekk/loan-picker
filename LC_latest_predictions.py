@@ -8,12 +8,12 @@ import sys
 import os
 import datetime
 import re
+import numpy as np
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.feature_extraction import DictVectorizer
 from collections import defaultdict, namedtuple
-
 #base_dir = os.path.dirname(os.path.realpath(__file__))
 base_dir = '/Users/james/Data_Incubator/loan-picker'
 sys.path.append(base_dir)
@@ -102,7 +102,8 @@ record_map = (('acc_now_delinq', lambda x: x['accNowDelinq']),
             ('desc_length', lambda x: get_desc_length(x['desc'])),
             ('dti', lambda x: x['dti']),
             ('emp_length', lambda x: get_emp_length(x['empLength'])), #convert to years from months
-            ('funded_amnt', lambda x: x['loanAmount']), #use amount requested rather than funded amnt!
+#            ('funded_amnt', lambda x: x['loanAmount']), #use amount requested rather than funded amnt!
+            ('loan_amnt', lambda x: x['loanAmount']), #use amount requested rather than funded amnt!
             ('inq_last_6mths', lambda x: x['inqLast6Mths']), 
             ('int_rate', lambda x: x['intRate']), 
             ('mths_since_last_delinq', lambda x: get_mnths_since(x['mthsSinceLastDelinq'])), 
@@ -144,3 +145,78 @@ for idx, feature_name in enumerate(feature_names):
 
 #%%
 pred_returns = RF_est.predict(X_rec)
+pred_returns = sorted(pred_returns, reverse = True)
+#%%
+with open(os.path.join(base_dir,'static/data/LC_test_res.pkl'),'rb') as in_strm:
+    val_set = dill.load(in_strm)
+    
+test_pred, test_weight_y, test_Npymnts = zip(*val_set)
+
+#%%
+n_bins = 500
+bins = np.percentile(test_pred, np.linspace(0,100,n_bins))
+sim_pred_inds = np.digitize(test_pred,bins)
+
+n_boots = 500 #5000
+poss_choose_K = np.logspace(np.log10(5),np.log10(len(pred_returns)),50).astype(int)
+poss_choose_K = np.unique(poss_choose_K)
+max_K = max(poss_choose_K)
+boot_inds = np.digitize(pred_returns[:max_K], bins) #find bins of first max_K points in prediction
+
+est_return = np.zeros((n_boots,len(poss_choose_K)))
+
+for b_idx in xrange(n_boots):
+    sampled_y = np.zeros(max_K)
+    sampled_N = np.zeros(max_K)
+    for ii in xrange(max_K):
+        cur_resp_set = np.nonzero(sim_pred_inds == boot_inds[ii])[0]
+        rand_choice = cur_resp_set[np.random.randint(0,len(cur_resp_set))]
+        sampled_y[ii] = test_weight_y[rand_choice]
+        sampled_N[ii] = test_Npymnts[rand_choice]
+    
+    for k_idx, choose_K in enumerate(poss_choose_K):
+        est_return[b_idx,k_idx] = np.mean(sampled_y[:choose_K])/np.mean(sampled_N[:choose_K])
+    
+est_return = LCM.annualize_returns(est_return)
+
+#%%
+from matplotlib.ticker import ScalarFormatter
+plt.close('all')
+#ax = sns.tsplot(data=est_return, time=poss_choose_K, err_style='unit_traces', 
+#                color="b")
+#plt.figure(figsize=(6.0,4.0))
+fig,ax = plt.subplots(figsize=(5.0,4.0))
+plt.plot(poss_choose_K,est_return.T,'b',lw=1.0,alpha=0.05)
+plt.plot(np.nan, np.nan,'r',lw=8,label='90% CI',alpha=0.35)
+plt.plot(np.nan, np.nan,'r',lw=4,label='50% CI',alpha=0.5)
+plt.plot(np.nan, np.nan,'y',lw=3,label='median',alpha=1.0)
+plt.legend(loc='best',fontsize=14)
+
+quantiles = [5, 95]
+q_bands = np.percentile(est_return,quantiles,axis=0)
+plt.fill_between(poss_choose_K, q_bands[0,:],q_bands[1,:],
+    alpha=0.35, facecolor='r', zorder=10000)
+#plt.plot(poss_choose_K, q_bands.T,'r',lw=1)
+#
+quantiles = [25, 75]
+q_bands = np.percentile(est_return,quantiles,axis=0)
+plt.fill_between(poss_choose_K, q_bands[0,:],q_bands[1,:],
+    alpha=0.5, facecolor='r', zorder=10001)
+#plt.plot(poss_choose_K, q_bands.T,'r',lw=2)
+
+quantiles = [50]
+q_bands = np.percentile(est_return,quantiles,axis=0)
+plt.plot(poss_choose_K, q_bands.T,'y',lw=2,zorder=10002)
+
+plt.xscale('log')
+plt.xlim(min(poss_choose_K),max(poss_choose_K))
+plt.xlabel('Number of loans selected',fontsize=14)
+plt.ylabel('Estimated annual returns (%)',fontsize=14)
+plt.ylim(-15,25)
+plt.axhline(y=0,color='k',ls='dashed')
+ax.set_xticks(np.concatenate((np.arange(10,100,10),np.arange(100,1100,100)),axis=0))
+ax.get_xaxis().set_major_formatter(ScalarFormatter())
+ax.set_xticklabels(["10",'','','','','','','','',"100",
+                    '','','','','','','','',"1000"],fontsize=12)
+plt.tight_layout()
+#plt.savefig(fig_dir + 'newloan_predict.png', dpi=500, format='png')

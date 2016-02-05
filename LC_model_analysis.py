@@ -94,8 +94,10 @@ predictors = [
 #%%
 response_var = 'ROI'
 y = LD[response_var].values  # response variable
-Npymnts = LD['exp_num_pymnts'].values # expected number of payments
-weight_y = (LD['mnthly_ROI'] * LD['exp_num_pymnts']).values #duration-weighted returns
+# weight_y = (LD['mnthly_ROI'] * LD['exp_num_pymnts']).values #duration-weighted returns
+# Npymnts = LD['exp_num_pymnts'].values # expected number of payments
+weight_y = LD['mnthly_ROI']
+Npymnts = np.ones_like(y) # expected number of payments
     
 LD.fillna(0, inplace=True)
 
@@ -337,7 +339,7 @@ for idx, pick_N in enumerate(pick_K_list):
              zorder = -1)
 
 if plot_figures:
-    plt.savefig(fig_dir + 'full_mod_compare.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'full_mod_compare_ROI.png', dpi=500, format='png')
     plt.close()
 
 #%%
@@ -395,7 +397,7 @@ plt.legend(loc='best', fontsize=14)
 plt.tight_layout()
 
 if plot_figures:
-    plt.savefig(fig_dir + 'grade_returns.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'grade_returns_ROI.png', dpi=500, format='png')
     plt.close()
 
 #%% validate streaming models
@@ -444,9 +446,10 @@ for idx, test_pt in enumerate(test_pts):
 stream_returns = LCM.annualize_returns((stream_returns))
 
 #%%
-LD['weight_y'] = (LD['mnthly_ROI'] * LD['exp_num_pymnts'])
-marg_returns = LD.groupby('issue_d')['weight_y'].mean()
-marg_returns = marg_returns / LD.groupby('issue_d')['exp_num_pymnts'].mean()
+# LD['weight_y'] = (LD['mnthly_ROI'] * LD['exp_num_pymnts'])
+# marg_returns = LD.groupby('issue_d')['weight_y'].mean()
+marg_returns = LD.groupby('issue_d')['mnthly_ROI'].mean()
+# marg_returns = marg_returns / LD.groupby('issue_d')['exp_num_pymnts'].mean()
 marg_returns = LCM.annualize_returns(marg_returns)
 
 actual_dates = [LD['issue_d'].min() + datetime.timedelta(days=test_pt) for test_pt in test_pts]
@@ -488,5 +491,5 @@ ax.annotate('Training data', xy=((xmin+xmax)/2-50., ymax-2), xytext=(xmin-700, y
             arrowprops=dict(facecolor='black', shrink=0.05))
 
 if plot_figures:
-    fig.savefig(fig_dir + 'time_validation.png', dpi=500, format='png')
+    fig.savefig(fig_dir + 'time_validation_ROI.png', dpi=500, format='png')
     plt.close()
