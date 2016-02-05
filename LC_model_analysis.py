@@ -25,8 +25,8 @@ import datetime
 
 plot_figures = True
 run_CV = False
-base_dir = os.path.dirname(os.path.realpath(__file__))
-#base_dir = '/Users/james/Data_Incubator/loan-picker'
+#base_dir = os.path.dirname(os.path.realpath(__file__))
+base_dir = '/Users/james/Data_Incubator/loan-picker'
     
 sys.path.append(base_dir)
 import LC_helpers as LCH
@@ -43,10 +43,6 @@ movie_dir = os.path.join(base_dir,'static/movies/')
 #load data 
 data_name = 'all_loans_proc'
 LD = pd.read_csv(data_dir + data_name, parse_dates=['issue_d',])
-
-#load long/lat data for each zip-code
-zip3_data = LCL.load_location_data(data_dir,group_by='zip3')        
-LD = pd.merge(LD,zip3_data,how='inner', left_on='zip3', right_index=True)
 
 #%%
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
@@ -94,11 +90,8 @@ predictors = [
 #%%
 response_var = 'ROI'
 y = LD[response_var].values  # response variable
-# weight_y = (LD['mnthly_ROI'] * LD['exp_num_pymnts']).values #duration-weighted returns
-# Npymnts = LD['exp_num_pymnts'].values # expected number of payments
-weight_y = LD['mnthly_ROI']
-Npymnts = np.ones_like(y) # expected number of payments
-    
+net_returns = LD['net_returns'].values
+prnc_weights = LD['prnc_weight'].values
 LD.fillna(0, inplace=True)
 
 print('Transforming data')
@@ -122,6 +115,7 @@ for idx, feature_name in enumerate(feature_names):
         X[:,idx] = tran_dict[use_cols[pidx]].fit_transform(X[:,idx].reshape(-1,1)).squeeze()
 
 dict_vect.tran_dict = tran_dict
+
 #%% COMPILE LIST OF MODELS TO COMPARE
     
 Lin_est = Ridge()
@@ -181,13 +175,14 @@ else:
 
 
 #%%
-model_set = [('Null',LCM.rand_pick_mod()),
-             ('Lin', Lin_model),
-             ('Lin_SVR',SVR_model),
-             ('GBR',GBR_model),
-             ('RF', RF_model)]
-#model_set = [('Lin', Lin_model),
+#model_set = [('Null',LCM.rand_pick_mod()),
+#             ('Lin', Lin_model),
+#             ('Lin_SVR',SVR_model),
+#             ('GBR',GBR_model),
 #             ('RF', RF_model)]
+model_set = [('Null',LCM.rand_pick_mod()),
+            ('Lin', Lin_model),
+             ('RF', RF_model)]
 
 #%%
 n_folds = 5
@@ -205,17 +200,17 @@ returns = defaultdict(list)
 marg_returns = []
 grade_returns = defaultdict(list)
 RF_feature_imp = defaultdict(list)
-grade_makeup = {name:np.zeros((len(kf),len(unique_grades))) for name,_ in model_set}
+grade_makeup = {name:np.zeros((len(kf),len(unique_grades))) for name, _ in model_set}
 cnt = 0
 np.random.seed(0)
 for train, test in kf:
  print('CV split {} of {}'.format(cnt, n_folds))
- marg_returns.append(np.mean(weight_y[test]) / np.mean(Npymnts[test]))
+ marg_returns.append(np.sum(net_returns[test]) / np.sum(prnc_weights[test]))
  for name, model in model_set:
      model.fit(X[train,:], y[train])
-     train_R2[name].append(model.score(X[train,:],y[train]))
+#     train_R2[name].append(model.score(X[train,:],y[train]))
      test_R2[name].append(model.score(X[test,:],y[test]))
-     train_pred = model.predict(X[train,:])
+#     train_pred = model.predict(X[train,:])
      test_pred = model.predict(X[test,:])
 
      if name == 'RF': #test feature importance for RF model
@@ -229,11 +224,14 @@ for train, test in kf:
                  shuff_R2[n] = model.score(Xshuff, y[test])    
              RF_feature_imp[col_name].append(test_R2[name][-1] - np.mean(shuff_R2))
   
-     returns[name].append(LCM.pick_K_returns_BTSTRP(weight_y[test], 
-                             test_pred, pick_K_list,Npymnts[test],n_boots=100, sub_marg=False))
-     grade_returns[name].append(LCM.pick_K_returns_by_grade(weight_y[test], 
-                             test_pred,LD.iloc[test][grade_group],grade_pick_K,
-                             Npymnts[test]))
+     returns[name].append(LCM.pick_K_returns_BTSTRP( 
+                             test_pred, net_returns[test], prnc_weights[test],
+                            pick_K_list, n_boots=100, sub_marg=False))
+                            
+     grade_returns[name].append(LCM.pick_K_returns_by_grade(
+                             test_pred, net_returns[test], prnc_weights[test],
+                            LD.iloc[test][grade_group], grade_pick_K))
+                            
      grade_makeup[name][cnt,:] = LCM.get_choice_grade_makeup(test_pred, LD.iloc[test][grade_group], 
                                                             grade_group, unique_grades, grade_pick_K)     
  cnt += 1
@@ -243,9 +241,11 @@ marg_returns = LCM.annualize_returns(np.array(marg_returns))
 for name, model in model_set:
     returns[name] = LCM.annualize_returns(np.array(returns[name]))
     rel_returns[name] = returns[name] - marg_returns[:,np.newaxis,np.newaxis]  
-    grade_returns[name] = LCM.annualize_returns(np.array(grade_returns[name]))
     returns[name] = np.reshape(returns[name], (-1,len(pick_K_list)))
     rel_returns[name] = np.reshape(rel_returns[name], (-1,len(pick_K_list)))
+    
+    grade_returns[name] = LCM.annualize_returns(np.array(grade_returns[name]))
+    grade_returns[name] = np.reshape(grade_returns[name], -1, len(unique_grades))
 
 
 #%% PLOT RELATIVE FEATURE IMPORTANCES FOR FULL RF MODEL
@@ -367,9 +367,10 @@ avg_Gint_rates = LD.groupby(grade_group)['int_rate'].mean()
 avg_Gint_rates.sort_index(inplace=True)
 best_returns = 100 * ((avg_Gint_rates/100/12 + 1) ** 12 - 1)
 
-mod_list = ['Null','Lin','Lin_SVR','GBR','RF']
+mod_list = [name for name,_ in model_set]
 n_mods = len(mod_list)
-mod_names = ['Random','Linear','Linear SVR','Gradient Boosting','Random Forest']
+#mod_names = ['Random','Linear','Linear SVR','Gradient Boosting','Random Forest']
+mod_names = ['Random','Linear','Random Forest']
 pal = sns.color_palette("muted", n_colors=len(mod_list))
 
 jitt_x = 0.6
@@ -382,12 +383,12 @@ for idx, mod_name in enumerate(mod_list):
     plt.errorbar(np.arange(len(grades)) + idx*jitt_x/n_mods - jitt_x/(2.),
                  np.mean(grade_returns[mod_name],axis=0),
                  np.std(grade_returns[mod_name],axis=0)/err_norm, 
-                color=pal[idx], label=mod_names[idx], lw=2, fmt='o-', ms=10, alpha=alpha)
+                color=pal[idx], label=mod_names[idx], lw=2, fmt='o', ms=10, alpha=alpha)
                  
 plt.plot(np.arange(len(grades)), best_returns,'k',lw=2, 
              ls='dashed', label='Interest rate')
              
-plt.xlim(-0.2, 5.2)
+plt.xlim(-0.4, 5.2)
 plt.ylim(0,25)
 grades = np.concatenate(([''],grades))
 ax.set_xticklabels(grades, fontsize=14)
@@ -412,7 +413,7 @@ n_trees=100
 min_samples_leaf=100
 
 #dont use time for this analysis
-use_cols = [col for col in all_pred_cnames if col != 'issue_day']
+use_cols = [col for col in use_cols if col != 'issue_day']
 RF_est = RandomForestRegressor(n_estimators=n_trees, max_depth=10, 
                                min_samples_leaf=min_samples_leaf, n_jobs=4)
 RF_mod = Pipeline([('col_sel',LCM.col_selector(use_cols,col_dict)),
@@ -439,17 +440,15 @@ for idx, test_pt in enumerate(test_pts):
     if n_test > 0:    
         stream_R2[idx] = RF_mod.score(X[test_set,:],y[test_set])
         test_pred = RF_mod.predict(X[test_set,:])
-        stream_returns[idx,:] = (LCM.pick_K_returns_BTSTRP(weight_y[test_set], 
-                                test_pred, pick_K_list,Npymnts[test_set],
+        stream_returns[idx,:] = (LCM.pick_K_returns_BTSTRP( 
+                                test_pred, net_returns[test_set], 
+                                prnc_weights[test_set],pick_K_list,
                                 n_boots=100, sub_marg=False)).squeeze()
                  
 stream_returns = LCM.annualize_returns((stream_returns))
 
 #%%
-# LD['weight_y'] = (LD['mnthly_ROI'] * LD['exp_num_pymnts'])
-# marg_returns = LD.groupby('issue_d')['weight_y'].mean()
-marg_returns = LD.groupby('issue_d')['mnthly_ROI'].mean()
-# marg_returns = marg_returns / LD.groupby('issue_d')['exp_num_pymnts'].mean()
+marg_returns = LD.groupby('issue_d')['net_returns'].sum() / LD.groupby('issue_d')['prnc_weight'].sum()
 marg_returns = LCM.annualize_returns(marg_returns)
 
 actual_dates = [LD['issue_d'].min() + datetime.timedelta(days=test_pt) for test_pt in test_pts]
@@ -464,15 +463,17 @@ fig,ax=plt.subplots()
 ax.plot(actual_dates[use_pts],stream_avg_returns[use_pts],'o-',
         color=pal[0],label='model-based selection')
 marg_returns.plot(label='marginal returns',color=pal[2])
+ax.set_ylim(0,25)
 ax2 = ax.twinx()
 date_counts = LD.groupby('issue_d')['issue_d'].count()  
 ax2.bar(date_counts.index.values,date_counts/1e3,width=10,fc='k',alpha=0.25) 
    
 ax.set_ylabel('Annualized returns (%)', color='k',fontsize=14)
-ax2.set_ylabel('Loan volume (thousands)', color='gray',fontsize=14)
+ax2.set_ylabel('Loan volume', color='gray',fontsize=14)
 ax.set_xlabel('Issue date',fontsize=14)
 ax.set_xlim(datetime.date(2009,01,01),LD['issue_d'].max())
 ax.legend(loc='upper left',fontsize=14)
+ax2.set_yticks([])
 
 ymin, ymax= ax.get_ylim()
 xmin, xmax = ax.get_xlim()
@@ -487,7 +488,7 @@ xmin = mdates.date2num(xmin)
 xmax = mdates.date2num(xmax)
 ax.add_patch(Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, alpha=0.25,
                        facecolor=pal[1]))
-ax.annotate('Training data', xy=((xmin+xmax)/2-50., ymax-2), xytext=(xmin-700, ymax-3),
+ax.annotate('Training data', xy=((xmin+xmax)/2-50., ymax-1.5), xytext=(xmin-700, ymax-2),
             arrowprops=dict(facecolor='black', shrink=0.05))
 
 if plot_figures:

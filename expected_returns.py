@@ -48,7 +48,7 @@ print_figs = False
 #load long/lat data for each zip-code
 zip3_data = LCL.load_location_data(data_dir,group_by='zip3') 
 LD['zip3'] = LD['zip3'].astype(int)       
-LD = pd.merge(LD,zip3_data,how='inner', left_on='zip3', right_index=True)
+LD = pd.merge(LD, zip3_data, how='inner', left_on='zip3', right_index=True)
 
 #%% Compute hazard functions for each loan grade and term 
 term_bandwidths = [4., 8.] #list of NAF smoothing bandwidth (for each term)
@@ -71,52 +71,26 @@ for idx,term in enumerate(keep_terms): #compute all hazard functions for each te
         
 #%%
 terms = LD.term.unique() #set of unique loan terms
-for term in terms: #for each possible loan term
-    
+for term in terms: #for each possible loan term  
     #get relevant set of loans
     cur_loans = LD.term == term 
     cur_LD = LD[cur_loans]
     
-    (NAR, weighted_NAR, MAR) = LCH.get_NARs(cur_LD, term)
-    LD.ix[cur_loans,'NAR'] = NAR #measured performance of each loan
-    LD.ix[cur_loans,'weighted_NAR'] = weighted_NAR #performance weighted by time contribution to imaginary portfolio
-    LD.ix[cur_loans,'MAR'] = MAR #principal weighted avg monthly returns
+    (NAR, net_returns, p_csum) = LCH.get_NARs(cur_LD, term)
+    LD.ix[cur_loans,'ROI'] = NAR #measured performance of each loan
+    LD.ix[cur_loans,'net_returns'] = net_returns #principal weighted avg monthly returns
+    LD.ix[cur_loans,'prnc_weight'] = p_csum #principal weighted avg monthly returns
+    LD.ix[cur_loans,'default_prob'] = LD.ix[cur_loans,'is_observed'].astype(float) #principal weighted avg monthly returns
 
-    (exp_NAR, weighted_exp_NAR, exp_MAR, tot_default_prob, exp_num_pymnts) = \
+    (exp_NAR, tot_default_prob, exp_num_pymnts, exp_net_returns, exp_csum) = \
             LCH.get_expected_NARs(cur_LD, term, all_hazards[term])
-    LD.ix[cur_loans,'exp_NAR'] = exp_NAR
-    LD.ix[cur_loans,'weighted_exp_NAR'] = weighted_exp_NAR
-    LD.ix[cur_loans,'exp_MAR'] = exp_MAR # expected monghtly avg returns
+    LD.ix[cur_loans,'ROI'] = exp_NAR
     LD.ix[cur_loans,'default_prob'] = tot_default_prob
     LD.ix[cur_loans,'exp_num_pymnts'] = exp_num_pymnts
-    
-#for observed loans use the NAR and for censored used the expected NAR
-LD['ROI'] = np.zeros((len(LD),))
-LD['weighted_ROI'] = np.zeros((len(LD),))
+    LD.ix[cur_loans,'net_returns'] = exp_net_returns
+    LD.ix[cur_loans,'prnc_weight'] = exp_csum   
 
 LD.ix[LD.is_observed,'exp_num_pymnts'] = LD.ix[LD.is_observed,'num_pymnts']
-
-LD.ix[LD.is_observed,'ROI'] = LD.ix[LD.is_observed,'NAR'] * 100
-LD.ix[~LD.is_observed,'ROI'] = LD.ix[~LD.is_observed,'exp_NAR'] * 100
-
-LD.ix[LD.is_observed,'weighted_ROI'] = LD.ix[LD.is_observed,'weighted_NAR'] * 100
-LD.ix[~LD.is_observed,'weighted_ROI'] = LD.ix[~LD.is_observed,'weighted_exp_NAR'] * 100
-
-LD.ix[LD.is_observed,'mnthly_ROI'] = LD.ix[LD.is_observed,'MAR']
-LD.ix[~LD.is_observed,'mnthly_ROI'] = LD.ix[~LD.is_observed,'exp_MAR']
-
-
-#%%
-stat_counts_by_grade = LD.groupby(['grade','loan_status']).agg({'grade':'count'}) #cuisine-conditional violations counts
-tot_by_grade = LD.groupby('grade').agg({'grade':'count'}) #total violations by cuisine
-grade_cond_stat_dist = stat_counts_by_grade.div(tot_by_grade,level='grade') #cuisine-conditional violation dist
-grade_cond_stat_dist.rename(columns={'grade':'num'},inplace=True)
-grade_cond_stat_dist = grade_cond_stat_dist.reset_index()
-
-tot_by_status = LD.groupby('loan_status').agg({'loan_status':'count'}) #total violations by cuisine
-tot_by_status = tot_by_status/1000 #convert counts to thousands
-tot_by_status.rename(columns={'loan_status':'num'},inplace=True)
-tot_by_status = tot_by_status.reset_index()
 
 #%%
 save_columns = ['ROI',
@@ -147,13 +121,14 @@ save_columns = ['ROI',
  'longitude',
  'loan_amnt',
  'loan_status',
- 'mnthly_ROI',
  'mths_since_last_delinq',
  'mths_since_last_major_derog',
  'mths_since_last_record',
+ 'net_returns',
  'num_add_desc',
  'num_pymnts',
  'open_acc',
+ 'prnc_weight',
  'pub_rec',
  'purpose',
  'revol_bal',
@@ -164,7 +139,6 @@ save_columns = ['ROI',
  'tot_coll_amt',
  'tot_cur_bal',
  'verification_status',
- 'weighted_ROI',
  'zip3']
  
 csv_name = 'all_loans_proc'

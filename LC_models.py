@@ -34,43 +34,35 @@ def pick_K_returns(y, y_pred, K_list, num_pymnts, sub_marg=True):
         pick_k_avgs = pick_k_avgs - marg_return
     return pick_k_avgs
 
-def pick_K_returns_BTSTRP(y, y_pred, K_list, num_pymnts, n_boots=500, sub_marg=True):
+def pick_K_returns_BTSTRP(y_pred, returns, weights, K_list, n_boots=500, sub_marg=True):
     '''metric based on the average of the data on the top K
     data points ranked by model predicted returns'''
-    if type(y) == pd.core.series.Series:
-        y_comb = pd.DataFrame({'obs': y.values, 'pred':y_pred,
-                                'num_pymnts': num_pymnts})
-    else:
-        y_comb = pd.DataFrame({'obs': y, 'pred':y_pred,
-                        'num_pymnts': num_pymnts})
+    y_comb = pd.DataFrame({'returns': returns, 'pred':y_pred,
+                        'weights': weights})
 
     pick_k_avgs = np.zeros((n_boots,len(K_list)))
     for n in xrange(n_boots):
-        y_samp = y_comb.sample(frac=1, replace=True)
-        y_samp = y_samp.sort_values(by='pred',ascending=False)
+        y_samp = y_comb.sample(frac=1, replace=True) #resample with replacement
+        y_samp = y_samp.sort_values(by='pred',ascending=False) #sort descending by predicted value
         for idx, K in enumerate(K_list):
-            picked_loans = y_samp.head(K)
-            pick_k_avgs[n,idx] = picked_loans['obs'].mean() / picked_loans['num_pymnts'].mean()
-        # pick_k_avgs[n,idx] = y_samp['obs'].head(K).mean()
+            picked_loans = y_samp.head(K) #take top K based on predicted
+            pick_k_avgs[n,idx] = picked_loans['returns'].sum() / picked_loans['weights'].sum()
         if sub_marg:
-            marg_returns = y_samp['obs'].mean() / y_samp['num_pymnts'].mean()
+            marg_returns = y_samp['returns'].sum() / y_samp['weights'].sum()
             pick_k_avgs[n,:] = pick_k_avgs[n,:] - marg_returns
     return pick_k_avgs
 
-def pick_K_returns_by_grade(y, y_pred, grades, K, num_pymnts):
+def pick_K_returns_by_grade(y_pred, returns, weights, grades, K, n_boots=100):
     '''metric based on the average of the data on the top K
     data points ranked by model predicted returns'''
-    if type(y) == pd.core.series.Series:
-        y_comb = pd.DataFrame({'obs': y.values, 'pred':y_pred, 
-                        'grade':grades, 'num_pymnts': num_pymnts})
-    else:
-        y_comb = pd.DataFrame({'obs': y, 'pred':y_pred, 
-                        'grade':grades, 'num_pymnts': num_pymnts})
-    y_comb = y_comb.sort_values(by='pred',ascending=False)
-    picked_loans = y_comb.groupby('grade').head(K).groupby('grade')
-    pick_k_avgs = picked_loans['obs'].mean() / picked_loans['num_pymnts'].mean()
-    pick_k_avgs = pick_k_avgs.sort_index() # sort by grade in alphabetical order  
-    # return pick_k_avgs - y_comb['obs'].mean()
+    y_comb = pd.DataFrame({'return': returns, 'pred':y_pred, 
+                        'grade':grades, 'weight': weights})
+    pick_k_avgs = np.zeros((n_boots, len(y_comb['grade'].unique())))
+    for n in xrange(n_boots):
+        y_samp = y_comb.sample(frac=1, replace=True) #resample with replacement
+        picked_loans = y_samp.groupby('grade').apply(lambda g: g.sort_values(by='pred', ascending=False).head(K))
+        picked_loans = picked_loans.groupby('grade')
+        pick_k_avgs[n,:] = picked_loans['return'].sum() / picked_loans['weight'].sum()
     return pick_k_avgs 
 
 def get_choice_grade_makeup(preds, grades, grade_group, unique_grades, K):
