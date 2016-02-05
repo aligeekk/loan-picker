@@ -151,33 +151,73 @@ with open(os.path.join(base_dir,'static/data/LC_test_res.pkl'),'rb') as in_strm:
     val_set = dill.load(in_strm)
     
 test_pred, test_weight_y, test_Npymnts = zip(*val_set)
+test_pred = np.array(test_pred)
+test_weight_y = np.array(test_weight_y)
+test_Npymnts = np.array(test_Npymnts)
+#%%
+n_bins = 100
+n_boots = 1000 #5000
+prctiles = np.linspace(1,99,25)
+K = 100
+
+bin_locs = np.linspace(0, 100, n_bins)
+bins = np.percentile(test_pred, bin_locs)
+
+sim_pred_inds = np.digitize(test_pred,bins)
+boot_inds = np.digitize(pred_returns, bins) #find bins of first max_K points in prediction
+
+est_return = np.zeros((n_bins,len(prctiles)))
+boot_vec = np.zeros(n_boots)
+for bin in xrange(1,n_bins):
+    cur_resp_set = np.nonzero(sim_pred_inds == bin)[0]
+    for boot in xrange(n_boots):    
+        boot_samp = np.random.choice(cur_resp_set, size=K, replace=True)
+        boot_vec[boot] = np.mean(test_weight_y[boot_samp])/np.mean(test_Npymnts[boot_samp])
+    est_return[bin,:] = np.percentile(boot_vec, prctiles)
+        
+est_return = LCM.annualize_returns(est_return)
 
 #%%
-n_bins = 500
-bins = np.percentile(test_pred, np.linspace(0,100,n_bins))
-sim_pred_inds = np.digitize(test_pred,bins)
+def smooth(x,beta):
+     """ kaiser window smoothing """
+     window_len=11
+     # extending the data at beginning and at the end
+     # to apply the window at the borders
+     s = np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
+     w = np.kaiser(window_len,beta)
+     y = np.convolve(w/w.sum(),s,mode='valid')
+     return y[5:len(y)-5]
 
-n_boots = 500 #5000
-poss_choose_K = np.logspace(np.log10(5),np.log10(len(pred_returns)),50).astype(int)
-poss_choose_K = np.unique(poss_choose_K)
-max_K = max(poss_choose_K)
-boot_inds = np.digitize(pred_returns[:max_K], bins) #find bins of first max_K points in prediction
+beta = 30
+sm_returns = est_return.copy()
+for p in xrange(len(prctiles)):
+    sm_returns[:,p] = smooth(est_return[:,p], beta)    
+#%%
+alphas = np.linspace(0,1.0,len(prctiles)//2)
+fig,ax = plt.subplots()
+for q in xrange(len(prctiles)//2):
+    cur_low = sm_returns[:,q]
+    cur_high = sm_returns[:,q+1]
+    ax.fill_between(bins, cur_low,cur_high,
+                     alpha=alphas[q], facecolor='k')
+  
+    cur_low = sm_returns[:,-q]
+    cur_high = sm_returns[:,-(q+1)]
+    ax.fill_between(bins, cur_low,cur_high,
+                     alpha=alphas[q], facecolor='k')
+med_idx = np.argwhere(prctiles == 50)[0]
+ax.plot(bins,sm_returns[:,med_idx],'w')
+#plt.plot(poss_choose_K, q_bands.T,'r',lw=1)
+ax.set_ylim(0,20)
+ax.set_xlim(-10,15)
 
-est_return = np.zeros((n_boots,len(poss_choose_K)))
-
-for b_idx in xrange(n_boots):
-    sampled_y = np.zeros(max_K)
-    sampled_N = np.zeros(max_K)
-    for ii in xrange(max_K):
-        cur_resp_set = np.nonzero(sim_pred_inds == boot_inds[ii])[0]
-        rand_choice = cur_resp_set[np.random.randint(0,len(cur_resp_set))]
-        sampled_y[ii] = test_weight_y[rand_choice]
-        sampled_N[ii] = test_Npymnts[rand_choice]
-    
-    for k_idx, choose_K in enumerate(poss_choose_K):
-        est_return[b_idx,k_idx] = np.mean(sampled_y[:choose_K])/np.mean(sampled_N[:choose_K])
-    
-est_return = LCM.annualize_returns(est_return)
+ax2 = ax.twinx()
+sns.distplot(pred_returns,rug=True, hist=False,kde=True, ax=ax2)
+sns.distplot(test_pred,rug=False, hist=False,kde=True, ax=ax2)
+yl2 = ax2.get_ylim()
+ax2.set_ylim(0,yl2[1]*1.5)
+ax2.set_yticks([])
+ax2.set_xlim(-10,15)
 
 #%%
 from matplotlib.ticker import ScalarFormatter
