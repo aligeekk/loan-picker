@@ -190,7 +190,7 @@ model_set = [('Null',LCM.rand_pick_mod()),
 #             ('RF', RF_model)]
 
 #%%
-n_folds = 10
+n_folds = 5
 kf = KFold(len(X), n_folds=n_folds, shuffle=True, random_state=0)
 
 pick_K_list = [10, 100, 1000]
