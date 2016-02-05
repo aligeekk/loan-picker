@@ -25,8 +25,8 @@ import datetime
 
 plot_figures = True
 run_CV = False
-#base_dir = os.path.dirname(os.path.realpath(__file__))
-base_dir = '/Users/james/Data_Incubator/loan-picker'
+base_dir = os.path.dirname(os.path.realpath(__file__))
+#base_dir = '/Users/james/Data_Incubator/loan-picker'
     
 sys.path.append(base_dir)
 import LC_helpers as LCH
@@ -241,11 +241,11 @@ marg_returns = LCM.annualize_returns(np.array(marg_returns))
 for name, model in model_set:
     returns[name] = LCM.annualize_returns(np.array(returns[name]))
     rel_returns[name] = returns[name] - marg_returns[:,np.newaxis,np.newaxis]  
-    returns[name] = np.reshape(returns[name], (-1,len(pick_K_list)))
-    rel_returns[name] = np.reshape(rel_returns[name], (-1,len(pick_K_list)))
+    returns[name] = returns[name].reshape(-1, len(pick_K_list))
+    rel_returns[name] = rel_returns[name].reshape(-1, len(pick_K_list))
     
     grade_returns[name] = LCM.annualize_returns(np.array(grade_returns[name]))
-    grade_returns[name] = np.reshape(grade_returns[name], -1, len(unique_grades))
+    grade_returns[name] = grade_returns[name].reshape(-1, len(unique_grades))
 
 
 #%% PLOT RELATIVE FEATURE IMPORTANCES FOR FULL RF MODEL

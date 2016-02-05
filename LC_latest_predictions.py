@@ -147,14 +147,14 @@ for idx, feature_name in enumerate(feature_names):
 #%%
 pred_returns = RF_est.predict(X_rec)
 pred_returns = sorted(pred_returns, reverse = True)
+
 #%%
 with open(os.path.join(base_dir,'static/data/LC_test_res.pkl'),'rb') as in_strm:
     val_set = dill.load(in_strm)
-    
-test_pred, test_weight_y, test_Npymnts = zip(*val_set)
-test_pred = np.array(test_pred)
-test_weight_y = np.array(test_weight_y)
-test_Npymnts = np.array(test_Npymnts)
+
+test_data = [np.array(tup) for tup in zip(*val_set)]
+test_pred, test_ROI, test_net_returns, test_weights = test_data
+
 #%%
 n_bins = 100
 n_boots = 1000 #5000
@@ -173,7 +173,8 @@ for bin in xrange(1,n_bins):
     cur_resp_set = np.nonzero(sim_pred_inds == bin)[0]
     for boot in xrange(n_boots):    
         boot_samp = np.random.choice(cur_resp_set, size=K, replace=True)
-        boot_vec[boot] = np.mean(test_weight_y[boot_samp])/np.mean(test_Npymnts[boot_samp])
+#        boot_vec[boot] = np.sum(test_returns[boot_samp])/np.sum(test_weights[boot_samp])
+        boot_vec[boot] = np.mean(test_ROI[boot_samp])
     est_return[bin,:] = np.percentile(boot_vec, prctiles)
         
 est_return = LCM.annualize_returns(est_return)
@@ -210,7 +211,7 @@ med_idx = np.argwhere(prctiles == 50)[0]
 ax.plot(bins,sm_returns[:,med_idx],'w')
 #plt.plot(poss_choose_K, q_bands.T,'r',lw=1)
 ax.set_ylim(0,20)
-ax.set_xlim(-10,15)
+ax.set_xlim(-0.10,0.15)
 
 ax2 = ax.twinx()
 sns.distplot(pred_returns,rug=True, hist=False,kde=True, ax=ax2)
@@ -218,46 +219,46 @@ sns.distplot(test_pred,rug=False, hist=False,kde=True, ax=ax2)
 yl2 = ax2.get_ylim()
 ax2.set_ylim(0,yl2[1]*1.5)
 ax2.set_yticks([])
-ax2.set_xlim(-10,15)
+ax2.set_xlim(-0.10,0.15)
 
 #%%
-from matplotlib.ticker import ScalarFormatter
-plt.close('all')
-#ax = sns.tsplot(data=est_return, time=poss_choose_K, err_style='unit_traces', 
-#                color="b")
-#plt.figure(figsize=(6.0,4.0))
-fig,ax = plt.subplots(figsize=(5.0,4.0))
-plt.plot(poss_choose_K,est_return.T,'b',lw=1.0,alpha=0.05)
-plt.plot(np.nan, np.nan,'r',lw=8,label='90% CI',alpha=0.35)
-plt.plot(np.nan, np.nan,'r',lw=4,label='50% CI',alpha=0.5)
-plt.plot(np.nan, np.nan,'y',lw=3,label='median',alpha=1.0)
-plt.legend(loc='best',fontsize=14)
-
-quantiles = [5, 95]
-q_bands = np.percentile(est_return,quantiles,axis=0)
-plt.fill_between(poss_choose_K, q_bands[0,:],q_bands[1,:],
-    alpha=0.35, facecolor='r', zorder=10000)
-#plt.plot(poss_choose_K, q_bands.T,'r',lw=1)
+#from matplotlib.ticker import ScalarFormatter
+#plt.close('all')
+##ax = sns.tsplot(data=est_return, time=poss_choose_K, err_style='unit_traces', 
+##                color="b")
+##plt.figure(figsize=(6.0,4.0))
+#fig,ax = plt.subplots(figsize=(5.0,4.0))
+#plt.plot(poss_choose_K,est_return.T,'b',lw=1.0,alpha=0.05)
+#plt.plot(np.nan, np.nan,'r',lw=8,label='90% CI',alpha=0.35)
+#plt.plot(np.nan, np.nan,'r',lw=4,label='50% CI',alpha=0.5)
+#plt.plot(np.nan, np.nan,'y',lw=3,label='median',alpha=1.0)
+#plt.legend(loc='best',fontsize=14)
 #
-quantiles = [25, 75]
-q_bands = np.percentile(est_return,quantiles,axis=0)
-plt.fill_between(poss_choose_K, q_bands[0,:],q_bands[1,:],
-    alpha=0.5, facecolor='r', zorder=10001)
-#plt.plot(poss_choose_K, q_bands.T,'r',lw=2)
-
-quantiles = [50]
-q_bands = np.percentile(est_return,quantiles,axis=0)
-plt.plot(poss_choose_K, q_bands.T,'y',lw=2,zorder=10002)
-
-plt.xscale('log')
-plt.xlim(min(poss_choose_K),max(poss_choose_K))
-plt.xlabel('Number of loans selected',fontsize=14)
-plt.ylabel('Estimated annual returns (%)',fontsize=14)
-plt.ylim(-15,25)
-plt.axhline(y=0,color='k',ls='dashed')
-ax.set_xticks(np.concatenate((np.arange(10,100,10),np.arange(100,1100,100)),axis=0))
-ax.get_xaxis().set_major_formatter(ScalarFormatter())
-ax.set_xticklabels(["10",'','','','','','','','',"100",
-                    '','','','','','','','',"1000"],fontsize=12)
-plt.tight_layout()
-#plt.savefig(fig_dir + 'newloan_predict.png', dpi=500, format='png')
+#quantiles = [5, 95]
+#q_bands = np.percentile(est_return,quantiles,axis=0)
+#plt.fill_between(poss_choose_K, q_bands[0,:],q_bands[1,:],
+#    alpha=0.35, facecolor='r', zorder=10000)
+##plt.plot(poss_choose_K, q_bands.T,'r',lw=1)
+##
+#quantiles = [25, 75]
+#q_bands = np.percentile(est_return,quantiles,axis=0)
+#plt.fill_between(poss_choose_K, q_bands[0,:],q_bands[1,:],
+#    alpha=0.5, facecolor='r', zorder=10001)
+##plt.plot(poss_choose_K, q_bands.T,'r',lw=2)
+#
+#quantiles = [50]
+#q_bands = np.percentile(est_return,quantiles,axis=0)
+#plt.plot(poss_choose_K, q_bands.T,'y',lw=2,zorder=10002)
+#
+#plt.xscale('log')
+#plt.xlim(min(poss_choose_K),max(poss_choose_K))
+#plt.xlabel('Number of loans selected',fontsize=14)
+#plt.ylabel('Estimated annual returns (%)',fontsize=14)
+#plt.ylim(-15,25)
+#plt.axhline(y=0,color='k',ls='dashed')
+#ax.set_xticks(np.concatenate((np.arange(10,100,10),np.arange(100,1100,100)),axis=0))
+#ax.get_xaxis().set_major_formatter(ScalarFormatter())
+#ax.set_xticklabels(["10",'','','','','','','','',"100",
+#                    '','','','','','','','',"1000"],fontsize=12)
+#plt.tight_layout()
+##plt.savefig(fig_dir + 'newloan_predict.png', dpi=500, format='png')

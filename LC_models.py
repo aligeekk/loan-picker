@@ -62,7 +62,8 @@ def pick_K_returns_by_grade(y_pred, returns, weights, grades, K, n_boots=100):
         y_samp = y_comb.sample(frac=1, replace=True) #resample with replacement
         picked_loans = y_samp.groupby('grade').apply(lambda g: g.sort_values(by='pred', ascending=False).head(K))
         picked_loans = picked_loans.groupby('grade')
-        pick_k_avgs[n,:] = picked_loans['return'].sum() / picked_loans['weight'].sum()
+        port = picked_loans['return'].sum() / picked_loans['weight'].sum()
+        pick_k_avgs[n,:] = port.sort_index().values
     return pick_k_avgs 
 
 def get_choice_grade_makeup(preds, grades, grade_group, unique_grades, K):

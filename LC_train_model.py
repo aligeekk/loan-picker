@@ -87,9 +87,9 @@ predictors = [
 #%%
 response_var = 'ROI'
 y = LD[response_var].values  # response variable
-Npymnts = LD['exp_num_pymnts'].values # expected number of payments
-weight_y = (LD['mnthly_ROI'] * LD['exp_num_pymnts']).values #duration-weighted returns
-    
+net_returns = LD['net_returns'].values
+prnc_weights = LD['prnc_weight'].values
+   
 LD.fillna(0, inplace=True)
 
 print('Transforming data')
@@ -150,10 +150,11 @@ RF_xval = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth,
 
 RF_xval.fit(X[train],y[train])
 test_pred = RF_xval.predict(X[test])
-test_weight_y = weight_y[test]
-test_Npymnts = Npymnts[test]
+test_net_returns = net_returns[test]
+test_ROI = y[test]
+test_weights = prnc_weights[test]
 
-val_set = zip(test_pred, test_weight_y, test_Npymnts)
+val_set = zip(test_pred, test_ROI, test_net_returns, test_weights)
 val_set = sorted(val_set, reverse=True)
 
 #%%
