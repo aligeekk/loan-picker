@@ -47,7 +47,7 @@ def get_NARs(LD, term, service_rate = 0.01):
             term: loan term (scalar) for the data in LD
             service_rate: percent of payments LC takes as service charge
         RETURNS: 
-            tuple containing NAR and duration-weighted NAR (NAR, weighted_NAR)            
+            tuple containing (NAR, net_returns, prnc_weight)         
     """
       
     #net gain is total payment recieved less principal less collection recovery fees
@@ -66,9 +66,9 @@ def get_NARs(LD, term, service_rate = 0.01):
           
     (p_sched, p_sched_obs) = get_amortization_schedules(LD, term, calc_int = False)
     
-    csum_prnc = np.sum(p_sched_obs,axis=1)
-    
-    
+    csum_prnc = np.sum(p_sched_obs,axis=1) #get summed cumsum or outstanding princ 
+    prnc_weight = csum_prnc/LD['funded_amnt']
+
     #compute total service charge fee for each loan
     service_charge = service_rate * LD['total_pymnt']
     #NEED TO PUT THRESHOLD ON SERVICE CHARGE TO HANDLE EARLY REPAYMENT
@@ -79,14 +79,13 @@ def get_NARs(LD, term, service_rate = 0.01):
     
     #take interest made, less lossed principal less total service fees to get net gains
     net_gains = (tot_gain - tot_loss - service_charge)
+    net_returns = net_gains/LD['funded_amnt']
+
+    mnthly_returns = net_gains/csum_prnc #avg monthly return weighted by outstanding prncp
     
-    avg_duration = LD.ix[LD.is_observed,'num_pymnts'].mean() #avg duration of matured loans
-    avg_monthly_return = net_gains/csum_prnc #avg monthly return weighted by outstanding prncp
-    wavg_monthly_return = avg_monthly_return * LD['num_pymnts'] / avg_duration #weighted by loan duration
-    
-    NAR = (1 + avg_monthly_return) ** 12 - 1 
-    weighted_NAR = (1 + wavg_monthly_return) ** 12 - 1
-    return (NAR, weighted_NAR, avg_monthly_return)
+    NAR = (1 + mnthly_returns) ** 12 - 1 
+
+    return (NAR, net_returns, prnc_weight)
     
 #%%
 def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
@@ -98,7 +97,7 @@ def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
             hazard_funs: array of hazard functions for each loan grade
             service_rate: percent of payments LC takes as service charge
         RETURNS: 
-            tuple containing exp_NAR and duration-weighted exp_NAR (exp_NAR, weighted_exp_NAR)            
+            tuple containing (exp_NAR, tot_default_prob, exp_num_pymnts, exp_net_returns, exp_prnc_weight)          
     """
     
     #https://www.lendingclub.com/info/demand-and-credit-profile.action
@@ -115,34 +114,34 @@ def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
     term_array = np.tile(np.arange(term+1),(len(LD),1)) #array of vectors going from 0 to term
     num_payments_array = LD['num_pymnts'][:,np.newaxis] * np.ones((len(LD),term+1)) #array of copies of the number of payments for each loan
 
-    interest_paid = np.cumsum(int_sched, axis=1)
-    cash_flows = interest_paid - term_array * LD['installment'][:,np.newaxis] * service_rate - p_sched
-    monthly_returns = cash_flows / np.cumsum(p_sched, axis=1)
+    interest_paid = np.cumsum(int_sched, axis=1) # total interest received at time t
+    #your net gain if you only received payments up to time t
+    gains_at_time = interest_paid - term_array * LD['installment'][:,np.newaxis] * service_rate - p_sched
+    princ_csum = np.cumsum(p_sched, axis=1) #cumulative sum of outstanding principal at time t   
+    monthly_returns = gains_at_time / princ_csum #avg monthly returns if default at t
 
     #make array containing grade-conditional hazard fnxs for each loan             
     grades = np.sort(LD.grade.unique()) #set of unique loan grades
     grade_map = {grade: idx for idx,grade in enumerate(grades)} #dict mapping grade letters to index values in the hazard_funs arrays
     grade_index = LD['grade'].apply(lambda x: grade_map[x]).astype(int)
-    def_probs = hazard_funs[grade_index.values,:]
+    def_probs = hazard_funs[grade_index.values,:] #default probabilities at each time 
 
-    #actual_probs = hazard_array.copy()
-    def_probs[num_payments_array > term_array] = 0 #prob of defaulting for made payments is 0
-    
+    def_probs[term_array < num_payments_array] = 0 #prob of defaulting for made payments is 0
     def_probs[(LD.loan_status == 'Fully Paid').values,:] = 0 #set default probs for paid loans to 0
     
     #handle charged off loans
     CO_set = (LD.loan_status == 'Charged Off').values #set of charged off loans
     CO_probs = def_probs[CO_set,:] #get default probs for those loans
-    CO_probs[num_payments_array[CO_set,:] == term_array[CO_set,:]] = 1.
+    CO_probs[num_payments_array[CO_set,:] == term_array[CO_set,:]] = 1. # default prob is 1 at time where default occurred
     CO_probs[num_payments_array[CO_set,:] < term_array[CO_set,:]] = 0.
-    def_probs[CO_set,:] = CO_probs
+    def_probs[CO_set,:] = CO_probs 
     
     #find loans that are 'in limbo'
-    in_limbo_labels = ['In Grace Period','Late (16-30 days)', 'Late (31-120 days)','Default']
+    in_limbo_labels = ['In Grace Period', 'Late (16-30 days)', 'Late (31-120 days)', 'Default']
     in_limbo = LD.loan_status.isin(in_limbo_labels).values
     
     #conditional probability of being charged off 
-    prob_CO = pd.to_numeric(LD['loan_status'].replace(outcome_map),errors='coerce')/100.
+    prob_CO = pd.to_numeric(LD['loan_status'].replace(outcome_map), errors='coerce')/100.
     
     #compute default probs for these loans separately
     dp_limbo = def_probs[in_limbo,:]
@@ -152,7 +151,6 @@ def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
     #assume that if the loan doesnt end up getting written off then we return to normal default probs for remaining time
     #this means that we have to weight the contribution of these guys by the prob that you didnt default given delinquent status
     new_weight_mat = (1 - prob_CO[in_limbo, np.newaxis]) * dp_limbo    
-    #adjust default probs for subsequent times
     later_time = num_payments_array[in_limbo,:] < term_array[in_limbo,:]
     dp_limbo[later_time] = new_weight_mat[later_time] 
     
@@ -162,18 +160,15 @@ def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
     pay_prob = 1 - tot_default_prob #total payment prob
     
     #expected returns is average monthly returns given default at each time, weighted by conditional probs of defaulting
-    cond_monthly_returns = np.sum(def_probs * monthly_returns,axis=1) + pay_prob * monthly_returns[:,-1]
-   
-    #now weight by loan duration
-    avg_duration = LD[LD.is_observed].num_pymnts.mean()
-    dur_weights = (term_array + 1) / avg_duration   
-    weight_cond_monthly_returns = np.sum(def_probs * monthly_returns * dur_weights,axis=1) + pay_prob * monthly_returns[:,-1]
-
+    exp_mnthly_returns = np.sum(def_probs * monthly_returns,axis=1) + pay_prob * monthly_returns[:,-1]
+    exp_net_gains = np.sum(def_probs * gains_at_time,axis=1) + pay_prob * gains_at_time[:,-1]
+    exp_net_returns = exp_net_gains / LD['funded_amnt'] # get relative returns
+    exp_csum = np.sum(def_probs * princ_csum, axis=1) + pay_prob * princ_csum[:,-1] #expected value of cumulative sum weight factor
+    exp_prnc_weight = exp_csum/LD['funded_amnt'] # normalize weight factor by loan amount
     exp_num_pymnts = np.sum((term_array + 1) * def_probs, axis=1) + pay_prob*term #expected number of payments
-    exp_NAR = (1 + cond_monthly_returns) ** 12 - 1
-    weighted_exp_NAR = (1 + weight_cond_monthly_returns) ** 12 - 1
+    exp_NAR = (1 + exp_mnthly_returns) ** 12 - 1
     
-    return (exp_NAR, weighted_exp_NAR, cond_monthly_returns, tot_default_prob, exp_num_pymnts)
+    return (exp_NAR, tot_default_prob, exp_num_pymnts, exp_net_returns, exp_prnc_weight)
     
     
 def extract_fips_coords(county_paths):
