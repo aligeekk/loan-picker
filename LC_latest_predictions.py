@@ -102,6 +102,7 @@ record_map = (('acc_now_delinq', lambda x: x['accNowDelinq']),
             ('desc_length', lambda x: get_desc_length(x['desc'])),
             ('dti', lambda x: x['dti']),
             ('emp_length', lambda x: get_emp_length(x['empLength'])), #convert to years from months
+
 #            ('funded_amnt', lambda x: x['loanAmount']), #use amount requested rather than funded amnt!
             ('loan_amnt', lambda x: x['loanAmount']), #use amount requested rather than funded amnt!
             ('inq_last_6mths', lambda x: x['inqLast6Mths']), 
