@@ -43,7 +43,6 @@ movie_dir = os.path.join(base_dir,'static/movies/')
 #load data 
 data_name = 'all_loans_proc'
 LD = pd.read_csv(data_dir + data_name, parse_dates=['issue_d',])
-
 #%%
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 
@@ -175,14 +174,20 @@ else:
 
 
 #%%
-#model_set = [('Null',LCM.rand_pick_mod()),
-#             ('Lin', Lin_model),
-#             ('Lin_SVR',SVR_model),
-#             ('GBR',GBR_model),
-#             ('RF', RF_model)]
 model_set = [('Null',LCM.rand_pick_mod()),
             ('Lin', Lin_model),
-             ('RF', RF_model)]
+            ('Lin_SVR',SVR_model),
+            ('GBR',GBR_model),
+            ('RF', RF_model)]
+# model_set = [('Null',LCM.rand_pick_mod()),
+#             ('Lin', Lin_model),
+#              ('RF', RF_model)]
+
+leg_titles = {'Null':'Random\nPicking',
+              'Lin':'Linear\nModel',
+              'Lin_SVR':'Linear SVM',
+              'GBR':'Gradient\nBoosting',
+              'RF':'Random\nForest'}
 
 #%%
 n_folds = 5
@@ -320,11 +325,9 @@ ax.annotate('Average returns', xy=(xcent, np.mean(marg_returns)), xycoords='data
                 arrowprops=dict(facecolor='black', shrink=0.05, width=3),
                 horizontalalignment='right', verticalalignment='bottom',
                 size=14)
-group_titles = ['Random\nPicking',
-                'Linear\nModel',
-                'Linear SVM',
-                'Gradient\nBoosting',
-                'Random\nForest']
+
+model_names = [name for name, _ in model_set]
+group_titles = [leg_titles[name] for name in model_names]
 ax.set_xticklabels(group_titles, rotation=90, fontsize=13)
 ax.legend(loc='lower right')
 plt.tight_layout()
@@ -332,7 +335,7 @@ plt.tight_layout()
 n_groups = len(pick_K_list)
 pal = sns.color_palette("muted")
 medians = df.groupby(['variable','Loans selected'])['value'].median()
-medians = medians.ix[['Null','Lin','Lin_SVR','GBR','RF']]
+medians = medians.ix[model_names]
 for idx, pick_N in enumerate(pick_K_list):
     plt.plot(np.arange(len(group_titles)) + idx*factor_width/n_groups - np.ceil(n_groups/2)*factor_width/n_groups,
              medians.ix[:,pick_N],ls='dashed',lw=1,color=pal[idx], alpha=0.5,
@@ -367,11 +370,10 @@ avg_Gint_rates = LD.groupby(grade_group)['int_rate'].mean()
 avg_Gint_rates.sort_index(inplace=True)
 best_returns = 100 * ((avg_Gint_rates/100/12 + 1) ** 12 - 1)
 
-mod_list = [name for name,_ in model_set]
-n_mods = len(mod_list)
+model_names = [name for name,_ in model_set]
+n_mods = len(model_names)
 #mod_names = ['Random','Linear','Linear SVR','Gradient Boosting','Random Forest']
-mod_names = ['Random','Linear','Random Forest']
-pal = sns.color_palette("muted", n_colors=len(mod_list))
+pal = sns.color_palette("muted", n_colors=len(model_names))
 
 jitt_x = 0.6
 alpha = 0.75
@@ -379,11 +381,11 @@ alpha = 0.75
 err_norm = 1.0
 fig = plt.figure(figsize=(6.0,5.0))
 ax = plt.subplot(1,1,1)
-for idx, mod_name in enumerate(mod_list):
+for idx, mod_name in enumerate(model_names):
     plt.errorbar(np.arange(len(grades)) + idx*jitt_x/n_mods - jitt_x/(2.),
                  np.mean(grade_returns[mod_name],axis=0),
                  np.std(grade_returns[mod_name],axis=0)/err_norm, 
-                color=pal[idx], label=mod_names[idx], lw=2, fmt='o', ms=10, alpha=alpha)
+                color=pal[idx], label=model_names[idx], lw=2, fmt='o', ms=10, alpha=alpha)
                  
 plt.plot(np.arange(len(grades)), best_returns,'k',lw=2, 
              ls='dashed', label='Interest rate')
