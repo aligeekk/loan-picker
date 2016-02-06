@@ -129,6 +129,14 @@ RF_est = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth,
                                min_samples_leaf=min_samples_leaf, 
                                min_samples_split=min_samples_split,n_jobs=4)
 
+max_depth=20 #16
+min_samples_leaf=25
+min_samples_split=50
+n_trees=1000 #100
+RF_large = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth, 
+                               min_samples_leaf=min_samples_leaf, 
+                               min_samples_split=min_samples_split,n_jobs=4)
+
 GBR_est = GradientBoostingRegressor(learning_rate=0.1, n_estimators=n_trees, 
                                 min_samples_leaf=min_samples_leaf,
                                 min_samples_split=min_samples_split, 
@@ -169,25 +177,31 @@ else:
     Lin_model = Lin_est.set_params(alpha=100.0)
     SVR_model = svr_est.set_params(C=1.0)
     RF_model = RF_est.set_params(max_features='auto')
+    RF_large_model = RF_large.set_params(max_features='auto')
     GBR_model = GBR_est.set_params(max_features='auto',
                                     max_depth=3)
 
 
 #%%
-model_set = [('Null',LCM.rand_pick_mod()),
-            ('Lin', Lin_model),
-            ('Lin_SVR',SVR_model),
-            ('GBR',GBR_model),
-            ('RF', RF_model)]
+# model_set = [('Null',LCM.rand_pick_mod()),
+#             ('Lin', Lin_model),
+#             ('Lin_SVR',SVR_model),
+#             ('GBR',GBR_model),
+#             ('RF', RF_model)]
 # model_set = [('Null',LCM.rand_pick_mod()),
 #             ('Lin', Lin_model),
 #              ('RF', RF_model)]
+model_set = [('Null',LCM.rand_pick_mod()),
+            ('Lin', Lin_model),
+             ('RF', RF_model),
+             ('LRF', RF_large_model)]
 
 leg_titles = {'Null':'Random\nPicking',
               'Lin':'Linear\nModel',
               'Lin_SVR':'Linear SVM',
               'GBR':'Gradient\nBoosting',
-              'RF':'Random\nForest'}
+              'RF':'Random\nForest',
+              'LRF':'Large Random\nForest'}
 
 #%%
 n_folds = 5
@@ -342,7 +356,7 @@ for idx, pick_N in enumerate(pick_K_list):
              zorder = -1)
 
 if plot_figures:
-    plt.savefig(fig_dir + 'full_mod_compare_ROI.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'full_mod_compare_ROI2.png', dpi=500, format='png')
     plt.close()
 
 #%%
@@ -400,7 +414,7 @@ plt.legend(loc='best', fontsize=14)
 plt.tight_layout()
 
 if plot_figures:
-    plt.savefig(fig_dir + 'grade_returns_ROI.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'grade_returns_ROI2.png', dpi=500, format='png')
     plt.close()
 
 #%% validate streaming models
