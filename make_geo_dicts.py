@@ -25,4 +25,9 @@ state_fips_dict = dict((state.abbr,state.fips) for state in us.STATES)
 data_loc = data_dir + 'state_fips_dict.p'
 dill.dump(state_fips_dict, open(data_loc, "wb" ) )
 
+zip3_loc_data = load_location_data(data_dir,group_by='zip3')
+data_loc = data_dir + 'zip3_loc_data.p'
+dill.dump(state_fips_dict, open(data_loc, "wb" ) )
+
+
 
