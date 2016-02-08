@@ -1,3 +1,7 @@
+"""
+@author: James McFarland
+"""
+
 import os
 import sys
 import re
@@ -31,21 +35,25 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(base_dir)
 import LC_helpers as LCH
 import LC_loading as LCL
-import LC_models as LCM
+import LC_modeling as LCM
 
 #set paths
 data_dir = os.path.join(base_dir,'static/data/')
 #fig_dir = os.path.join(base_dir,'static/images/')
 fig_dir = os.path.join(base_dir,'tmp/')
-movie_dir = os.path.join(base_dir,'static/movies/')
 
 #%%
 #load data 
 data_name = 'all_loans_proc'
 LD = pd.read_csv(data_dir + data_name, parse_dates=['issue_d',])
-#%%
+
+#%% Set up list of predictors and their properties
+'''Store info for each predictor as a named tuple containing the col-name within
+the pandas dataframe, the full_name (human readable), and the type of normalization
+to apply to that feature.'''
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 
+#dict to create transformers for each specified type
 transformer_map = {'minMax':MinMaxScaler(),
                    'maxAbs':MaxAbsScaler(),
                    'standScal':StandardScaler(),
@@ -86,7 +94,7 @@ predictors = [
             predictor('longitude','longitude','minMax')
             ]
 
-#%%
+#%% Build X and y data
 response_var = 'ROI'
 y = LD[response_var].values  # response variable
 net_returns = LD['net_returns'].values
@@ -101,7 +109,6 @@ dict_vect = DictVectorizer(sparse=False)
 X = dict_vect.fit_transform(recs)                  
 print('Done')
 
-#%%
 feature_names = dict_vect.get_feature_names()
 col_dict = defaultdict(list)
 tran_dict = {}
@@ -115,13 +122,12 @@ for idx, feature_name in enumerate(feature_names):
 
 dict_vect.tran_dict = tran_dict
 
-#%% COMPILE LIST OF MODELS TO COMPARE
-    
+#%% COMPILE LIST OF MODELS TO COMPARE  
 Lin_est = Ridge()
 
 svr_est = LinearSVR(epsilon=0)
 
-max_depth=14 #16
+max_depth=16 
 min_samples_leaf=50
 min_samples_split=100
 n_trees=100 #100
@@ -142,7 +148,7 @@ GBR_est = GradientBoostingRegressor(learning_rate=0.1, n_estimators=n_trees,
                                 min_samples_split=min_samples_split, 
                                 max_depth=2)
 
-#%%   
+#%% Run CV grid search if desired.
 if run_CV:
     print('Performing grid search on linear model')
     params = {'alpha':[0.1,1.0,10.0,100.,1000.]}
@@ -182,7 +188,7 @@ else:
                                     max_depth=3)
 
 
-#%%
+#%% Specify set of models to test
 # model_set = [('Null',LCM.rand_pick_mod()),
 #             ('Lin', Lin_model),
 #             ('Lin_SVR',SVR_model),
@@ -193,27 +199,24 @@ else:
 #              ('RF', RF_model)]
 model_set = [('Null',LCM.rand_pick_mod()),
             ('Lin', Lin_model),
-             ('RF', RF_model),
-             ('LRF', RF_large_model)]
+             ('RF', RF_model)]
 
 leg_titles = {'Null':'Random\nPicking',
               'Lin':'Linear\nModel',
               'Lin_SVR':'Linear SVM',
               'GBR':'Gradient\nBoosting',
-              'RF':'Random\nForest',
-              'LRF':'Large Random\nForest'}
+              'RF':'Random\nForest'}
 
-#%%
+#%% Compute returns for all models using K-fold cross-val
 n_folds = 5
 kf = KFold(len(X), n_folds=n_folds, shuffle=True, random_state=0)
 
-pick_K_list = [10, 100, 1000]
-grade_pick_K = 100
-n_feature_shuffs = 3
+pick_K_list = [10, 100, 1000] #list of portfolio sizes to test
+grade_pick_K = 100 #portfolio size for computing separate grade-based portfolio returns
+n_feature_shuffs = 3 #number of times to shuffle features (at each fold) for computing feature-importances
 
 grade_group = 'grade' #either grade or sub-grade
-unique_grades = sorted(LD[grade_group].unique())
-train_R2 = defaultdict(list)
+unique_grades = sorted(LD[grade_group].unique())train_R2 = defaultdict(list)
 test_R2 = defaultdict(list)
 returns = defaultdict(list)
 marg_returns = []
@@ -227,9 +230,7 @@ for train, test in kf:
  marg_returns.append(np.sum(net_returns[test]) / np.sum(prnc_weights[test]))
  for name, model in model_set:
      model.fit(X[train,:], y[train])
-#     train_R2[name].append(model.score(X[train,:],y[train]))
      test_R2[name].append(model.score(X[test,:],y[test]))
-#     train_pred = model.predict(X[train,:])
      test_pred = model.predict(X[test,:])
 
      if name == 'RF': #test feature importance for RF model
@@ -243,7 +244,7 @@ for train, test in kf:
                  shuff_R2[n] = model.score(Xshuff, y[test])    
              RF_feature_imp[col_name].append(test_R2[name][-1] - np.mean(shuff_R2))
   
-     returns[name].append(LCM.pick_K_returns_BTSTRP( 
+     returns[name].append(LCM.pick_K_returns( 
                              test_pred, net_returns[test], prnc_weights[test],
                             pick_K_list, n_boots=100, sub_marg=False))
                             
@@ -255,6 +256,7 @@ for train, test in kf:
                                                             grade_group, unique_grades, grade_pick_K)     
  cnt += 1
 
+# Annualize portfolio returns, and convert them into numpy arrays as needed
 rel_returns = {}
 marg_returns = LCM.annualize_returns(np.array(marg_returns))
 for name, model in model_set:
@@ -288,8 +290,6 @@ use_titles = [col_titles[col_name] for col_name in feature_imp_df.index.values]
 ax.set_xticks(np.arange(len(feature_imp_df)) + bar_width/2)
 ax.set_xticklabels(use_titles, rotation=90, fontsize=12)
 
-#plt.xticks(np.arange(len(feature_imp_df))+bar_width, use_titles, rotation='vertical')
-
 plt.ylabel('Relative importance', fontsize=16)
 plt.ylim(cutoff,1)
 plt.xlim(1,len(use_titles))
@@ -304,7 +304,11 @@ if plot_figures:
     plt.savefig(fig_dir + 'fullRF_feature_imp.png', dpi=500, format='png')
     plt.close()
 
-#%%
+
+#%% Plot comparison of model returns
+model_names = [name for name, _ in model_set]
+group_titles = [leg_titles[name] for name in model_names]
+
 new_dict = {key: arr[:,0] for key,arr in zip(returns.keys(), 
                          returns.values())}
 df1 = pd.melt(pd.DataFrame(new_dict))                           
@@ -325,10 +329,9 @@ pal = sns.color_palette("muted")
 plt.figure(figsize=(8.0,6.0))
 ax = sns.violinplot(x='variable',y='value',data=df, hue='Loans selected',
                  split=False, width=factor_width,
-                 order = ['Null','Lin','Lin_SVR','GBR', 'RF'],
-                linewidth=0.5)
-plt.ylabel('Annual returns (%)',fontsize=16)
-plt.xlabel('Selection method',fontsize=16)
+                 order = model_names, linewidth=0.5)
+plt.ylabel('Annual returns (%)', fontsize=16)
+plt.xlabel('Selection method', fontsize=16)
 plt.ylim(0,30)
 #ax.axhline(y=0,color='k',ls='dashed')
 xlim = plt.xlim()
@@ -340,8 +343,6 @@ ax.annotate('Average returns', xy=(xcent, np.mean(marg_returns)), xycoords='data
                 horizontalalignment='right', verticalalignment='bottom',
                 size=14)
 
-model_names = [name for name, _ in model_set]
-group_titles = [leg_titles[name] for name in model_names]
 ax.set_xticklabels(group_titles, rotation=90, fontsize=13)
 ax.legend(loc='lower right')
 plt.tight_layout()
@@ -359,7 +360,8 @@ if plot_figures:
     plt.savefig(fig_dir + 'full_mod_compare_ROI2.png', dpi=500, format='png')
     plt.close()
 
-#%%
+
+#%% Plot proportion of grades picked by each model
 all_dfs = []
 for name,_ in model_set:
     all_dfs.append(pd.DataFrame({'values':np.mean(grade_makeup[name],axis=0)/100.,'Model':name},
@@ -378,11 +380,11 @@ if plot_figures:
     plt.savefig(fig_dir + 'picked_grades_props.png', dpi=500, format='png')
     plt.close()
 
+
 #%% plot avg returns by grade for different models
 grades = np.sort(LD[grade_group].unique())
-avg_Gint_rates = LD.groupby(grade_group)['int_rate'].mean()
-avg_Gint_rates.sort_index(inplace=True)
-best_returns = 100 * ((avg_Gint_rates/100/12 + 1) ** 12 - 1)
+best_returns = LD.groupby(grade_group)['best_NAR'].mean() * 100
+best_returns.sort_index(inplace=True)
 
 model_names = [name for name,_ in model_set]
 n_mods = len(model_names)
@@ -402,7 +404,7 @@ for idx, mod_name in enumerate(model_names):
                 color=pal[idx], label=model_names[idx], lw=2, fmt='o', ms=10, alpha=alpha)
                  
 plt.plot(np.arange(len(grades)), best_returns,'k',lw=2, 
-             ls='dashed', label='Interest rate')
+             ls='dashed', label='Best possible')
              
 plt.xlim(-0.4, 5.2)
 plt.ylim(0,25)
@@ -417,30 +419,31 @@ if plot_figures:
     plt.savefig(fig_dir + 'grade_returns_ROI2.png', dpi=500, format='png')
     plt.close()
 
-#%% validate streaming models
-train_day = 2800
-test_dates = LD.ix[LD.issue_day < train_day,'issue_day']
-n_samps = 50
+
+#%% validate generalization across time by training on new data and testing on older and older data
+train_day = 2800 #train on data after this day
+test_dates = LD.ix[LD.issue_day < train_day,'issue_day'] #set of test loans 
+
+'''Generate a grid of time-points for validation. Set it up to have approximately equi-populated
+bins (so the spacing becomes wider further into the past.'''
+n_samps = 50 #number of sample time points to test
 test_pts = np.percentile(test_dates,np.linspace(100./n_samps,100-100./n_samps,n_samps))
 test_pts = test_pts[::-1]
 
+'''Set up Random Forest model to use'''
+#dont use time for this analysis
+use_cols = [col for col in use_cols if col != 'issue_day']
 max_depth=14
 n_trees=100
 min_samples_leaf=100
-
-#dont use time for this analysis
-use_cols = [col for col in use_cols if col != 'issue_day']
-RF_est = RandomForestRegressor(n_estimators=n_trees, max_depth=10, 
-                               min_samples_leaf=min_samples_leaf, n_jobs=4)
-RF_mod = Pipeline([('col_sel',LCM.col_selector(use_cols,col_dict)),
-                        ('est',RF_est)])
+RF_mod = RandomForestRegressor(n_estimators=n_trees, max_depth=10, max_feautres='auto',
+                               min_samples_leaf=min_samples_leaf, n_jobs=-1)
                         
-train_set = (LD['issue_day'] < train_day).values
-RF_mod.fit(X[train_set], y[train_set])
+train_set = (LD['issue_day'] < train_day).values #bool mask for test set membership
+RF_mod.fit(X[train_set], y[train_set]) #fit model
 
+#compute returns at each validation time point
 stream_R2 = np.zeros(len(test_pts),)*np.nan
-cont_Nshuff=5
-cont_R2 = np.zeros((len(test_pts),cont_Nshuff))
 stream_returns = np.zeros((len(test_pts),100))*np.nan
 pick_K_list = [100]
 n_loans = len(y)
@@ -456,14 +459,14 @@ for idx, test_pt in enumerate(test_pts):
     if n_test > 0:    
         stream_R2[idx] = RF_mod.score(X[test_set,:],y[test_set])
         test_pred = RF_mod.predict(X[test_set,:])
-        stream_returns[idx,:] = (LCM.pick_K_returns_BTSTRP( 
+        stream_returns[idx,:] = (LCM.pick_K_returns( 
                                 test_pred, net_returns[test_set], 
                                 prnc_weights[test_set],pick_K_list,
                                 n_boots=100, sub_marg=False)).squeeze()
                  
 stream_returns = LCM.annualize_returns((stream_returns))
 
-#%%
+#%% Plot returns for past-validation
 marg_returns = LD.groupby('issue_d')['net_returns'].sum() / LD.groupby('issue_d')['prnc_weight'].sum()
 marg_returns = LCM.annualize_returns(marg_returns)
 
@@ -495,8 +498,6 @@ ymin, ymax= ax.get_ylim()
 xmin, xmax = ax.get_xlim()
 xmin = datetime.timedelta(days=train_day) + LD['issue_d'].min()
 xmax = LD['issue_d'].max()
-#ax.axvspan(datetime.timedelta(days=train_day) + LD['issue_d'].min(),
-#           xmax, alpha=0.25, color='red')
 
 from matplotlib.patches import Rectangle
 import matplotlib.dates as mdates

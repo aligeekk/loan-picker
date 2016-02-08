@@ -2,15 +2,17 @@
 """
 Created on Wed Feb  3 14:58:57 2016
 
-@author: james
+@author: James McFarland
 """
 
 import os
 import sys
 import re
-
 import numpy as np
 import pandas as pd
+from collections import defaultdict, namedtuple
+import datetime
+import dill
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler, MinMaxScaler, RobustScaler
@@ -20,18 +22,14 @@ from sklearn.pipeline import Pipeline
 from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import ShuffleSplit
 
-from collections import defaultdict, namedtuple
-import datetime
-
 #base_dir = os.path.dirname(os.path.realpath(__file__))
 base_dir = '/Users/james/Data_Incubator/loan-picker'
     
 sys.path.append(base_dir)
 import LC_helpers as LCH
 import LC_loading as LCL
-import LC_models as LCM
+import LC_modeling as LCM
 
-import dill
 
 #set paths
 data_dir = os.path.join(base_dir,'static/data/')
@@ -42,6 +40,9 @@ data_name = 'all_loans_proc'
 LD = pd.read_csv(data_dir + data_name, parse_dates=['issue_d',])
 
 #%%
+'''Store info for each predictor as a named tuple containing the col-name within
+the pandas dataframe, the full_name (human readable), and the type of normalization
+to apply to that feature.'''
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 
 transformer_map = {'minMax':MinMaxScaler(),
@@ -84,7 +85,7 @@ predictors = [
             predictor('longitude','longitude','minMax')
             ]
 
-#%%
+#%% Build X and y data
 response_var = 'ROI'
 y = LD[response_var].values  # response variable
 net_returns = LD['net_returns'].values
@@ -114,12 +115,13 @@ for idx, feature_name in enumerate(feature_names):
 
 transformer_tuple = (dict_vect, col_dict, tran_dict, predictors)
 
-#%%
+#%% Save data for transformers
 with open(os.path.join(base_dir,'static/data/trans_tuple.pkl'),'wb') as out_strm:
     dill.dump(transformer_tuple, out_strm)
     
-#%% COMPILE LIST OF MODELS TO COMPARE
-max_depth=14 #16
+
+#%% Fit Random Forest model
+max_depth=16
 min_samples_leaf=50
 min_samples_split=100
 n_trees=100 #100
@@ -128,14 +130,17 @@ RF_est = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth,
                                min_samples_split=min_samples_split,n_jobs=4, 
                                max_features='auto')
 
-#%%   
 RF_est.fit(X,y)
 
-#%%
+#%% Save Random Forest model
 with open(os.path.join(base_dir,'static/data/LC_model.pkl'),'wb') as out_strm:
     dill.dump(RF_est, out_strm)
     
-#%% Now get a reference set of cross-validated tuples of (pred, weight_obs, dur)
+
+'''Now get a reference set of cross-validated tuples of (pred, weight_obs, dur)
+Need to refit a separate model using a train-test split. Then use the validation set
+to generate a lookup table of predicted and measured returns, so we can estimate
+likely realized portfolio returns for a given set of model predicted returns'''
 #split_date = datetime.datetime(2015,01,01)
 #train = (LD['issue_d'] < split_date).values
 #test = (LD['issue_d'] >= split_date).values
@@ -157,7 +162,7 @@ test_weights = prnc_weights[test]
 val_set = zip(test_pred, test_ROI, test_net_returns, test_weights)
 val_set = sorted(val_set, reverse=True)
 
-#%%
+#%% Save the set of validation data
 with open(os.path.join(base_dir,'static/data/LC_test_res.pkl'),'wb') as out_strm:
     dill.dump(val_set, out_strm)
 

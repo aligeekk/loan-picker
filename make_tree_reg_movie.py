@@ -16,41 +16,35 @@ from bs4 import BeautifulSoup
 import LC_helpers as LCH
 import LC_loading as LCL
 
-import pickle
 import cairosvg
 from scipy.spatial import KDTree  # for finding KNN
 import scipy 
 import os
 
-base_dir = '/Users/james/Data_Incubator/LC_app'
+base_dir = '/Users/james/Data_Incubator/loan-picker'
 #base_dir = os.path.dirname(os.path.realpath(__file__))
 data_dir = os.path.join(base_dir,'static/data/')
 fig_dir = os.path.join(base_dir,'static/images/')
 movie_dir = os.path.join(base_dir,'static/movies/')
 
 data_name = 'all_loans_proc'
-LD = pd.read_csv(data_dir + data_name)
-#LD['issue_d'] = pd.to_datetime(LD['issue_d'],format = '%Y-%m-%d',unit='D')
+LD = pd.read_csv(data_dir + data_name, parse_dates=['issue_d'])
 
-fips_data = LCL.load_location_data(group_by='fips')
-zip3_data = LCL.load_location_data(group_by='zip3')
-fips_to_zip = LCL.make_fips_dict(group_by='zip')
+fips_data = LCL.load_location_data(data_dir, group_by='fips')
+zip3_data = LCL.load_location_data(data_dir, group_by='zip3')
+fips_to_zip = LCL.make_fips_to_zip_dict(data_dir, group_by='zip')
         
-#%%
-LD = pd.merge(LD,zip3_data,how='inner', left_on='zip3', right_index=True)
-
-#%%
+#%% make a k-tree for doing nearest neighbor imputation of missing data
 base_map = LCL.load_base_map(fig_dir + 'USA_Counties_text.svg', ax_xml=True)
 (county_paths,state_paths) = LCL.get_map_paths(base_map,fips_to_zip)
 title_path = base_map.findAll('text')[0]
 map_coords = LCH.extract_fips_coords(county_paths)
 ktree = KDTree(map_coords.values) #make nearest neighbor tree
 
-#%%
+#%% make sequence of decision trees and build a movie
 X = LD[['longitude','latitude']]
 y = LD['ROI'] #plot average return by area, not portfolio return
 
-#%% make sequence of decision trees and build a movie
 max_levels = 16
 min_samples_leaf = 50
 pred_arr = np.zeros((len(fips_data),max_levels))
@@ -59,7 +53,7 @@ for n in xrange(max_levels):
     clf.fit(X, y)
     pred_arr[:,n] = clf.predict(fips_data[['longitude','latitude']].values)
     
-#%%
+#%% generate pngs for reg-tree at each depth value
 image_list_path = os.path.join(movie_dir,'image_list.txt')
 F = open(image_list_path,'wb+')
 pred_prc = scipy.percentile(pred_arr,[10, 90]) 
@@ -88,10 +82,9 @@ for n in xrange(max_levels):
     F.write(out_file + '\n')
 
 F.close()
-#%%
+
+#%% call convert to generate the movie from image seq
 import subprocess
 outfile = os.path.join(movie_dir,'tree_movie.mp4')
 subprocess.call(['convert -delay 26 @{} -quality 100% -fill white -opaque none -alpha off {}'.format(image_list_path,outfile)],
                  shell=True)
-#
-

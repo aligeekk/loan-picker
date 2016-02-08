@@ -89,6 +89,8 @@ for term in terms: #for each possible loan term
     LD.ix[cur_loans,'exp_num_pymnts'] = exp_num_pymnts
     LD.ix[cur_loans,'net_returns'] = exp_net_returns
     LD.ix[cur_loans,'prnc_weight'] = exp_csum   
+    
+    LD.ix[cur_loans, 'best_NAR'] = LCH.get_best_returns(cur_LD, term)
 
 LD.ix[LD.is_observed,'exp_num_pymnts'] = LD.ix[LD.is_observed,'num_pymnts']
 
@@ -98,6 +100,7 @@ save_columns = ['ROI',
  'addr_state',
  'annual_inc',
  'annual_inc_joint',
+ 'best_NAR',
  'collections_12_mths_ex_med',
  'cr_line_dur',
  'delinq_2yrs',
@@ -145,7 +148,7 @@ csv_name = 'all_loans_proc'
 save_loans = LD[save_columns]
 save_loans.to_csv(temp_data_dir + csv_name) 
 
-#%%
+#%% make compressed dataset for pushing to Heroku web app
 save_columns = ['ROI',
  'addr_state',
  'annual_inc',
