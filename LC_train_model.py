@@ -49,8 +49,7 @@ transformer_map = {'minMax':MinMaxScaler(),
                    'maxAbs':MaxAbsScaler(),
                    'standScal':StandardScaler(),
                    'log_minmax': LCM.log_minmax(),
-                   'robScal':RobustScaler()
-                   }
+                   'robScal':RobustScaler()}
 
 predictors = [
             predictor('acc_now_delinq','num delinq accounts','maxAbs'),
