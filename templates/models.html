@@ -54,14 +54,12 @@
 			</div>
 
 			<div>
-			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Available loans">
-			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Towards automated investing</h2>
+			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="def_prob">
+			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Modeling default probabilities</h2>
 			</a>
-			<p>One of my next steps is to link into the Lending Club API, and show you which loans you should invest in, and what the projected returns are on portfolios of different sizes. For example, here I trained the models on all data up to the latest month, and then estimated the expected returns on loan portfolios of different sizes. Since we can't simply take the model-predicted returns at face value, I estimated the distributions of returns using a bootstrap resampling procedure. Specifically, I randomly assembled loan portfolios where the model-predicted returns were matched to those in the current data. I then used the calculated returns on these resampled portfolios to estimate a distribution of likely returns.</p>
-			<img class="img-responsive center-block" src="/static/images/newloan_predict.png?{{rnum}}" width="600"></img>
+			<p>In addition to building regression models that predict the ROI of each loan directly, one can also make classifiers for predicting whether or not a loan will default. This can be useful for quantifying the risk associated with a given loan, in addition to its expected ROI. With scikit-learn this requires a bit of care (see <a href="details#Fitting classifiers">details</a>), but essentially I just fed the same set of predictors into a Random Forest classifier. We can then use the classifier to predict the default probabilities associated with each loan, using only the initial loan info provided, just as we would generate a predicted return. We can see that the predicted annual returns and default probabilities are negatively correlated at each loan grade (interest rate level), as we would expect.</p>
+			<img class="img-responsive center-block" src="/static/images/ret_dp_compare.png?{{rnum}}" width="600"></img>
 			</div>
-
-			<h2 style="padding-top: 50px; margin-top: -50px; text-align: center;">Take a look at <b>loan-picker.herokuapp.com</b></h2>
 
 		</div>
 

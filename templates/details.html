@@ -101,7 +101,7 @@
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Portfolio returns">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Estimating returns on loan portfolios</h2>
 			</a>
-			<p>Rather than measuring the ability of the models to predict the returns of individual loans (such as with an R2 value), a more useful approach is to quantify the returns on a portfolio of loans selected using a particular strategy. To do this, I estimate the returns on investment portfolios with <i>K</i> loans, where we select the top <i>K</i> loans predicted by our model. I then calculate the returns on these portfolios as a weighted average of the returns of the individual loans, weighted by the length of time that each loan contributes to the portfolio. This is basically like plugging the monthly payments of the entire portfolio into the "NAR" formula above. I could also of course weight different loans by their principal to get a more accurate reflection of their contribution to the portfolio, but I opted not to do that in order to avoid having the results be dominated by larger loans.</p>
+			<p>Rather than measuring the ability of the models to predict the returns of individual loans (such as with an R2 value), a more useful approach is to quantify the returns on a portfolio of loans selected using a particular strategy. To do this, I estimate the returns on investment portfolios with <i>K</i> loans, where we select the top <i>K</i> loans predicted by our model. I then calculate the returns on these portfolios using the same 'NAR' formula above. This simply requres keeping track of the (expected) net gains recieved from each loan, as well as the (expected) cumulative sum of outstanding principal over the entire term (i.e., the denominator in the NAR equation). You can then simply sum these terms over all loans in a given portfolio and divide them to get the NAR for the portfolio. I could also of course weight different loans by their principal to get a more accurate reflection of their contribution to the portfolio, but I opted not to do that in order to avoid having the results be dominated by larger loans.</p>
 				<img class="img-responsive center-block" src="/static/images/loan_pred_examp.png?{{rnum}}" width="500"></img>
 		</div>
 
@@ -117,6 +117,14 @@
 			Your browser does not support the video tag.
 			</video>
 			<img class="img-responsive center-block" src="/static/movies/tree_cbar.png?{{rnum}}" width="600"></img>
+		</div>
+
+		<div class="blog-post">
+			<br>
+			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Fitting classifiers">
+			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Fitting classifiers</h2>
+			</a>
+			<p>Fitting classifiers for predicting default probability basically just involves invoking scikit-learn's classifier estimators rather than regressors, and feeding in the calculated default probabilities rather than the ROI as the target variable. For loans where we have observed the final outcome the default probability is either a one or zero, and we can treat this as a class label, however for unobserved loans it represents a class probability. Since scikit-learn's classifier fit functions don't accept class probabilities natively, we need to do a little massaging. To get around this, I used the 'sample_weights' optional input, and fed in each unobserved data point twice, once with each class label, using the estimated class probabilities as the sample weights.</p>
 		</div>
 
 <!-- 		<div class="blog-post">
