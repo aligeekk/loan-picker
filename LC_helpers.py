@@ -2,52 +2,87 @@
 """
 Created on Mon Jan  4 16:05:51 2016
 
-@author: james
+@author: James McFarland
 """
+import re
 import numpy as np
 import pandas as pd
 import seaborn as sns
-
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 import matplotlib.pyplot as plt
 import matplotlib.colorbar as cbar
-import re
 
-#%%
 def get_amortization_schedules(LD, term, calc_int = True):
-    
+    '''Calculate loan amortization schedules for all loans in dataframe with a specified term length.
+    INPUTS: 
+        LD: pandas dataframe with loan data.
+        term: int specifying loan term in months.
+        calc_int: boolean specifying whether or not to calculate interest schedule as well (default True).
+    OUTPUTS:
+        Tuple containing (prin_sched, prin_sched_obs, [int_sched])
+            prin_sched: [n_loans x term+1] array of scheduled outstanding principal.
+            prin_sched_obs: [n_loans x term+1] array of observed outstanding principal by month.
+            [int_sched]: [n_loans x term+1] array of scheduled interest payments by month'''
+
     n_loans = len(LD)
+    assert(LD['term'].unique() == [term],"found loan data not matching specified term")
     term_array = np.tile(np.arange(term+1),(n_loans,1)) #array of vectors going from 0 to term
-    num_payments_array = LD['num_pymnts'][:,np.newaxis] * np.ones((n_loans,term+1)) #array of copies of the number of payments for each loan
+    #array of copies of the number of payments for each loan
+    num_payments_array = LD['num_pymnts'][:,np.newaxis] * np.ones((n_loans,term+1)) 
     monthly_int = LD['int_rate'][:,np.newaxis]/12./100. #monthly interest rate for each loan
     
-    #get amortization schedule
+    #get amortization schedule of outstanding principal
     prin_sched = ((1 + monthly_int) ** term_array - 1) / ((1 + monthly_int) ** term - 1)
     prin_sched = LD['funded_amnt'][:,np.newaxis]*(1 - prin_sched)
 
-    #compute cumulative sum of payments actually received
-    prin_sched_obs = prin_sched.copy() #over observed terms
-    prin_sched_obs[num_payments_array <= term_array] = 0
+    #compute schedule of payments actually received
+    prin_sched_obs = prin_sched.copy() 
+    prin_sched_obs[num_payments_array <= term_array] = 0 #havent received future payments yet
    
     if not calc_int:
         return (prin_sched, prin_sched_obs)
-    else: 
+    else: #calc schedule of interest payments if requested
         int_sched = LD['installment'][:,np.newaxis] + np.diff(prin_sched,axis=1)    
-        int_sched = np.concatenate((np.zeros((n_loans,1)),int_sched),axis=1) #include a month0, for loans that default before they make any payments
+        #include a month0, for loans that default before they make any payments
+        int_sched = np.concatenate((np.zeros((n_loans,1)),int_sched),axis=1) 
         return (prin_sched, prin_sched_obs, int_sched)
         
 
-#%% calculate NARs (only works for observed data)
-def get_NARs(LD, term, service_rate = 0.01):
-    """compute NARs for all loans in dataframe LD. Uses precomputed hazard functions 
-    to estimate expected NARs for immature loans.
+def get_best_returns(LD, term, service_rate = 0.01):
+    """compute best possible returns (ie if no loans default). 
         INPUTS: 
             LD: dataframe of loan data
             term: loan term (scalar) for the data in LD
             service_rate: percent of payments LC takes as service charge
         RETURNS: 
-            tuple containing (NAR, net_returns, prnc_weight)         
+            best_NAR as a pandas series"""
+
+    tot_pymnts = LD['term'] * LD['installment']
+    tot_sc = tot_pymnts * service_rate #total paid in service fees to LC
+    net_gains = tot_pymnts - tot_sc - LD['funded_amnt']
+
+    (p_sched, _) = get_amortization_schedules(LD, term, calc_int = False)
+    csum_prnc = np.sum(p_sched,axis=1) #get summed cumsum of outstanding princ 
+
+    net_returns = net_gains/LD['funded_amnt']
+    mnthly_returns = net_gains/csum_prnc #avg monthly return weighted by outstanding prncp
+    best_NAR = (1 + mnthly_returns) ** 12 - 1 
+
+    return best_NAR
+ 
+
+def get_NARs(LD, term, service_rate = 0.01):
+    """compute net-annualized returns (NARs) for all loans in dataframe LD. 
+        INPUTS: 
+            LD: dataframe of loan data
+            term: loan term (scalar) for the data in LD
+            service_rate: percent of payments LC takes as service charge
+        RETURNS: 
+            tuple containing (NAR, net_returns, prnc_weight) 
+            NAR: net-annualized return (as fraction)
+            net_returns: Net gains normalized by loan amount
+            prnc_weight: Summed value of cumulative sum of outstanding prnc (denom in LC NAR calc)    
     """
       
     #net gain is total payment recieved less principal less collection recovery fees
@@ -57,37 +92,36 @@ def get_NARs(LD, term, service_rate = 0.01):
     tot_loss = LD['funded_amnt'] - LD['total_rec_prncp']
     tot_loss[LD['loan_status'] != 'Charged Off'] = 0 #set loss to 0 for loans that arent charged off
     
-    #for loans where the principal is charged off and then 
-    #later fully recovered. set the loan duration to be the loan term. This is a hack,
-    #but we dont know when it's actually recovered, and this at least prevents
-    #these loans from appearing like they provide gigantic returns
+    '''for loans where the principal is charged off and then later fully recovered, set the 
+    loan duration to be the loan term. This is a hack, but we dont know when it's actually 
+    recovered, and this at least prevents these loans from appearing like they provide gigantic
+    returns. This also doesnt get rid of all these corner case, just the most obvious ones.'''
     post_CO_rec = (LD['loan_status'] == 'Charged Off') & (LD['recoveries'] > LD['funded_amnt'])
     LD.ix[post_CO_rec,'num_pymnts'] = LD.ix[post_CO_rec,'term']        
           
     (p_sched, p_sched_obs) = get_amortization_schedules(LD, term, calc_int = False)
     
     csum_prnc = np.sum(p_sched_obs,axis=1) #get summed cumsum or outstanding princ 
-    prnc_weight = csum_prnc/LD['funded_amnt']
+    prnc_weight = csum_prnc/LD['funded_amnt'] #normalized value of the denominator in LC NAR calc
 
     #compute total service charge fee for each loan
     service_charge = service_rate * LD['total_pymnt']
-    #NEED TO PUT THRESHOLD ON SERVICE CHARGE TO HANDLE EARLY REPAYMENT
+    #find set of loans that are paid off in full after less than a year
     early_repay = (LD['total_pymnt'] == LD['funded_amnt']) & \
-                    (LD['num_pymnts'] <= 12)
+                    (LD['num_pymnts'] <= 12) 
+    #LC has a max service charge in these cases 
     max_sc = LD['num_pymnts'] * LD['installment'] * service_rate
-    service_charge[early_repay] = max_sc[early_repay]
+    service_charge[early_repay] = max_sc[early_repay] #cap service charge
     
     #take interest made, less lossed principal less total service fees to get net gains
     net_gains = (tot_gain - tot_loss - service_charge)
     net_returns = net_gains/LD['funded_amnt']
-
     mnthly_returns = net_gains/csum_prnc #avg monthly return weighted by outstanding prncp
-    
-    NAR = (1 + mnthly_returns) ** 12 - 1 
+    NAR = (1 + mnthly_returns) ** 12 - 1 #annualize
 
     return (NAR, net_returns, prnc_weight)
+
     
-#%%
 def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
     """compute NARs for all loans in dataframe LD. Uses precomputed hazard functions 
     to estimate expected NARs given loan status for immature loans.
@@ -97,7 +131,12 @@ def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
             hazard_funs: array of hazard functions for each loan grade
             service_rate: percent of payments LC takes as service charge
         RETURNS: 
-            tuple containing (exp_NAR, tot_default_prob, exp_num_pymnts, exp_net_returns, exp_prnc_weight)          
+            tuple containing (exp_NAR, tot_default_prob, exp_num_pymnts, exp_net_returns, exp_prnc_weight)  
+            exp_NAR: expected net-annualized return.
+            tot_default_prob: estimated probability of defaulting at any point.
+            exp_num_pymnts: expected number of payments recieved.
+            exp_net_returns: expected net gains normalized by loan amount
+            exp_prnc_weight: expected value of denom in LC NAR calc        
     """
     
     #https://www.lendingclub.com/info/demand-and-credit-profile.action
@@ -136,27 +175,26 @@ def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
     CO_probs[num_payments_array[CO_set,:] < term_array[CO_set,:]] = 0.
     def_probs[CO_set,:] = CO_probs 
     
-    #find loans that are 'in limbo'
-    in_limbo_labels = ['In Grace Period', 'Late (16-30 days)', 'Late (31-120 days)', 'Default']
-    in_limbo = LD.loan_status.isin(in_limbo_labels).values
-    
     #conditional probability of being charged off 
     prob_CO = pd.to_numeric(LD['loan_status'].replace(outcome_map), errors='coerce')/100.
-    
-    #compute default probs for these loans separately
+
+    #find loans that are 'in limbo', and handle them separately
+    in_limbo_labels = ['In Grace Period', 'Late (16-30 days)', 'Late (31-120 days)', 'Default']
+    in_limbo = LD.loan_status.isin(in_limbo_labels).values    
     dp_limbo = def_probs[in_limbo,:]
-    #set default prob based on map at the current time
+    #set default prob at current time based on map of recov probs
     dp_limbo[num_payments_array[in_limbo,:] == term_array[in_limbo,:]] = prob_CO[in_limbo] 
     
-    #assume that if the loan doesnt end up getting written off then we return to normal default probs for remaining time
-    #this means that we have to weight the contribution of these guys by the prob that you didnt default given delinquent status
+    '''assume that if the loan doesnt end up getting written off then we return to normal 
+    default probs for remaining time. This means that we have to weight the contribution of 
+    these guys by the prob that you didnt default given delinquent status'''
     new_weight_mat = (1 - prob_CO[in_limbo, np.newaxis]) * dp_limbo    
     later_time = num_payments_array[in_limbo,:] < term_array[in_limbo,:]
     dp_limbo[later_time] = new_weight_mat[later_time] 
     
     def_probs[in_limbo,:] = dp_limbo #store in-limbo values back in full array
     
-    tot_default_prob = np.sum(def_probs, axis=1)
+    tot_default_prob = np.sum(def_probs, axis=1) #total default probs
     pay_prob = 1 - tot_default_prob #total payment prob
     
     #expected returns is average monthly returns given default at each time, weighted by conditional probs of defaulting
@@ -172,14 +210,17 @@ def get_expected_NARs(LD, term, hazard_funs, service_rate = 0.01):
     
     
 def extract_fips_coords(county_paths):
-    '''Get the geographic coordinates (AU) of each county (fips) in the map'''
+    '''Get the geographic coordinates (AU) of each county (fips) in the map.
+    Useful for filling in missing data based on nearest neighbors
+    INPUTS:
+        county_paths: set of path objects from bs4 for each county.
+    OUTPUTS:
+        dataframe of coordinate values for each fips'''
     coord_dict = {}
     re_path = re.compile(r'path d=\"(.*)\" id')
     re_ML = re.compile(r'[MLz]')
     for county in county_paths:
         path = re.findall(re_path,str(county))[0]
-#        if path:
-#            path = path[0]            
         coord_list = []
         numpair_set = re.split(re_ML,path)
         for numpair in numpair_set:
@@ -195,7 +236,14 @@ def extract_fips_coords(county_paths):
 
 def fill_missing_fips(ktree,map_coords,fips_data):
     '''Take a dataframe indexed by fips coordinates and fill in data for
-    missing fips using nearest neighbor lookup '''    
+    missing fips using nearest neighbor lookup.
+    INPUTS:
+        ktree: pre-computed ktree object.
+        map_coords: dataframe of coordinates for each fips.
+        fips_data: dataframe keyed by fips that we want to fill in.
+    OUTPUTS:
+        new_data: data frame with missing FIPS filled in.'''
+
     missing_fips = [fips for fips in map_coords.index.values 
                     if fips not in fips_data.index.values]
     new_data = {}
@@ -219,7 +267,17 @@ def fill_missing_fips(ktree,map_coords,fips_data):
  
 def paint_map(data, soup_map, county_paths = None, fips_to_zip = None, 
               color = 'blue', get_cbar = True, agg_fun='mean'):
-    '''paints the data onto an svg base map based on either zip3 or states'''
+    '''paints the data onto an svg base map based on either zip3 or states.
+    INPUTS:
+        data: pandas series of data, indexed by the geographic grouping variable.
+        soup_map: bs4 object containing the svg base map.
+        county_paths: pre-extracted county paths.
+        fips_to_zip: dict for mapping from fips to zip codes (3 or 5 digit).
+        color: base color scheme.
+        get_cbar: bool specifying whether to export a figure containing the color bar.
+        agg_fun: aggregation function to use.
+    OUTPUTS:
+        cbar_fig: optional handle to the colobar.'''
     
     #set base path style properties
     if (data.index.name == 'zip3') | (data.index.name == 'zip_code') | (data.index.name == 'fips'):
@@ -235,13 +293,15 @@ def paint_map(data, soup_map, county_paths = None, fips_to_zip = None,
         pal = sns.light_palette(color, as_cmap=True) 
         missing_path_style = 'font-size:12px;fill-rule:nonzero;stroke:#000000;stroke-opacity:1.0;fill-opacity:1.0;stroke-width:0.1;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:butt;marker-start:none;stroke-linejoin:bevel;fill:#000000'
     
+    #color color map properties
     cNorm  = colors.Normalize(vmin = data.quantile(0.05), vmax = data.quantile(0.95))
     scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=pal)
         
+    #apply color map to scalar values to get a series of hex color codes
     data = data.apply(scalarMap.to_rgba)
     data = data.apply(colors.rgb2hex)
     
-    for p in county_paths:     
+    for p in county_paths: #paint mapping
         if (data.index.name == 'zip3') | (data.index.name == 'zip_code'):      
             lookup = fips_to_zip[p['id']]
         elif data.index.name == 'state_fips':
@@ -254,7 +314,7 @@ def paint_map(data, soup_map, county_paths = None, fips_to_zip = None,
         else: 
             p['style'] = missing_path_style
     
-    if get_cbar:
+    if get_cbar: #make color bar if desired
         cbar_fig,ax=plt.subplots(1,1,figsize=(6,1))
         cb1 = cbar.ColorbarBase(ax,cmap=pal, norm=cNorm, orientation='horizontal')  
         name_legend_map = {'counts': 'Number of loans (thousands)',
@@ -277,18 +337,27 @@ def paint_map(data, soup_map, county_paths = None, fips_to_zip = None,
         return cbar_fig 
     
     
-def compute_group_avgs(df, col_name, group_by, agg_fun='mean', 
+def compute_group_avgs(data, col_name, group_by, agg_fun='mean', 
                        state_fips_dict = None, min_counts = 50):
-    """get series of group-avgs based on either addr_state or zip3 """
-    group_counts = df.groupby(group_by)['int_rate'].count()
+    """Get series of within-group-stats based on either addr_state or zip3.
+    INPUTS:
+        data: pandas dataframe.
+        col_name: column name of response variable.
+        group_by: column name of grouping variable (either zip3 or addr_state).
+        agg_fun: aggregation function to use (default 'mean').
+        state_fips_dict: dict to map state names to fips if needed.
+        min_counts: min number of loans per group to include.
+    OUTPUTS:
+        group_avgs: pandas series with results."""
+    group_counts = data.groupby(group_by)['int_rate'].count()
     if agg_fun=='count': #if we want counts just replace avgs with this
         group_avgs = group_counts/1000 #keep in thousands
     elif agg_fun=='mean':
-        group_avgs = df.groupby(group_by)[col_name].mean()
+        group_avgs = data.groupby(group_by)[col_name].mean()
     elif agg_fun=='median':
-        group_avgs = df.groupby(group_by)[col_name].median()
+        group_avgs = data.groupby(group_by)[col_name].median()
     elif agg_fun=='std':
-        group_avgs = df.groupby(group_by)[col_name].std()
+        group_avgs = data.groupby(group_by)[col_name].std()
     if agg_fun != 'count':
         group_avgs = group_avgs[group_counts >= min_counts] 
     
@@ -297,68 +366,3 @@ def compute_group_avgs(df, col_name, group_by, agg_fun='mean',
         group_avgs.index.name = 'state_fips'
         
     return group_avgs   
-
-#%% generating figures
-def make_strat_returns_fig(LD, group_by = None, K_prctile=25, smooth_span = 5):
-    '''Make figure showing how much better you do if you pick from the 
-    historically best geographic regions'''
-    
-    import datetime
-    plot_col = 'weighted_ROI'
-    counts_by_date = LD.groupby('issue_d')['issue_d'].count()
-    start_date = np.datetime64(datetime.datetime(2009,01,01),'ns')
-    counts_by_date = counts_by_date[counts_by_date.index > start_date]
-    unique_dates = np.sort(counts_by_date.index.unique())
-    
-    if group_by:
-        K_num = np.round(len(LD[group_by].unique())*K_prctile/100) #pick best K from group
-        best_state_avgs = np.zeros(len(unique_dates),)
-        worst_state_avgs = np.zeros(len(unique_dates),)
-        marg_avgs = np.zeros(len(unique_dates),)
-        for idx,up_to in enumerate(unique_dates):
-            states_up_to = LD[LD.issue_d < up_to].groupby(group_by)[plot_col].mean()
-            curr_data = LD.ix[LD.issue_d == up_to,[plot_col,group_by]] #loans issued at this date
-            marg_avgs[idx] = curr_data[plot_col].mean()
-        
-            best_states = states_up_to.sort_values(ascending=False).head(K_num).index.values
-            worst_states = states_up_to.sort_values(ascending=False).tail(K_num).index.values
-            best_state_avgs[idx] = curr_data.ix[curr_data[group_by].isin(best_states),plot_col].mean()
-            worst_state_avgs[idx] = curr_data.ix[curr_data[group_by].isin(worst_states),plot_col].mean()
-        
-        moving_avgs = pd.DataFrame({'counts':counts_by_date,'marg':marg_avgs,'best':best_state_avgs},index=unique_dates)
-        moving_avgs = pd.ewma(moving_avgs,span=smooth_span)
-        moving_avgs['rel_imp'] = 100*(moving_avgs['best'] - moving_avgs['marg']) / moving_avgs['marg']
-    else:
-        moving_avgs = pd.DataFrame({'counts':counts_by_date},index=unique_dates)   
-        moving_avgs = pd.ewma(moving_avgs,span=smooth_span)
-   
-    fig,ax1 = plt.subplots(figsize = (6.0,4.0))
-    ax1.plot(unique_dates,moving_avgs['counts']/1000,'b')
-    ax1.set_ylabel('Number of loans (thousands)', color='b',fontsize=16)
-    ax1.set_xlabel('Loan issue date')
-    for tl in ax1.get_yticklabels():
-        tl.set_color('b')     
-    
-    if group_by: #if were computing group avgs
-        ax2 = ax1.twinx()
-        ax2.plot(unique_dates,moving_avgs['rel_imp'],'r')
-        ax2.set_ylabel('Relative improvement (%)', color='r',fontsize=16)
-        ax2.axhline(y=0.,color='k')
-        for tl in ax2.get_yticklabels():
-            tl.set_color('r')         
-        ax1.get_yaxis().set_ticks([])
-    plt.tight_layout()
-    
-    return fig  
-  
-#def make_png_response(fig):
-#    ''' Make mpl figure into a png object to feed into html '''    
-#    import StringIO
-#    from flask import make_response
-#    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-#    canvas=FigureCanvas(fig)
-#    png_output = StringIO.StringIO()
-#    canvas.print_png(png_output)
-#    response= make_response(png_output.getvalue())
-#    response.headers['Content-Type'] = 'image/png'
-#    return response

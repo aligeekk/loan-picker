@@ -12,31 +12,21 @@ def annualize_returns(mnthly_returns):
     ann_ret = ((mnthly_returns + 1)**12 - 1) * 100
     return ann_ret
 
-def pick_K_returns(y, y_pred, K_list, num_pymnts, sub_marg=True):
-    '''metric based on the average of the data on the top K
-    data points ranked by model predicted returns'''
-    if type(y) == pd.core.series.Series:
-        y_comb = pd.DataFrame({'obs': y.values, 'pred':y_pred,
-                                'num_pymnts': num_pymnts})
-    else:
-        y_comb = pd.DataFrame({'obs': y, 'pred':y_pred,
-                        'num_pymnts': num_pymnts})
 
-    y_comb = y_comb.sort_values(by='pred',ascending=False)
-    pick_k_avgs = np.zeros(len(K_list),)
-    for idx, K in enumerate(K_list):
-        picked_loans = y_comb.head(K)
-        pick_k_avgs[idx] = (picked_loans['obs'] * \
-            picked_loans['num_pymnts'] / picked_loans['num_pymnts'].mean()).mean()
-        # pick_k_avgs[idx] = y_comb['obs'].head(K).mean()
-    if sub_marg:
-        marg_return = (y_comb['obs'] * y_comb['num_pymnts'] / y_comb['num_pymnts'].mean()).mean()
-        pick_k_avgs = pick_k_avgs - marg_return
-    return pick_k_avgs
 
-def pick_K_returns_BTSTRP(y_pred, returns, weights, K_list, n_boots=500, sub_marg=True):
-    '''metric based on the average of the data on the top K
-    data points ranked by model predicted returns'''
+def pick_K_returns(y_pred, returns, weights, K_list, n_boots=500, sub_marg=True):
+    '''Compute avg returns (NAR) on portfolios of different sizes selected
+    by taking the top K loans based on model-predicted ROI.
+    INPUTS:
+        y_pred: vector of model predicted ROIs.
+        returns: vector of net_returns (observed/expected) for each loan
+        weights: vector of weight factors (denominator in LC NAR calc).
+        K_list: list of different loan portfolio sizes to test
+        n_boots: number of bootstrap resampling iterations
+        sub_marg: boolean indicating whether to subtract off marginal returns
+    OUTPUTS:
+        pick_k_avgs: array of portfolio returns size: (n_boots, len(K_list))
+        '''
     y_comb = pd.DataFrame({'returns': returns, 'pred':y_pred,
                         'weights': weights})
 
@@ -52,9 +42,19 @@ def pick_K_returns_BTSTRP(y_pred, returns, weights, K_list, n_boots=500, sub_mar
             pick_k_avgs[n,:] = pick_k_avgs[n,:] - marg_returns
     return pick_k_avgs
 
+
 def pick_K_returns_by_grade(y_pred, returns, weights, grades, K, n_boots=100):
-    '''metric based on the average of the data on the top K
-    data points ranked by model predicted returns'''
+    '''Same as pick_K_returns but picks portfolios separately from each loan
+    grade class.
+    INPUTS:
+        y_pred: vector of model-predicted loan returns.
+        returns: measured/expected net returns
+        weights: vector of weights (denominator of LC NAR calc)
+        grades: vector of loan grades
+        K: portfolio size (scalar)
+        n_boots: number of bootstrap samples
+    OUTPUTS:
+        pick_k_avgs: array of portfolio returns size: (n_boots, len(grades))'''
     y_comb = pd.DataFrame({'return': returns, 'pred':y_pred, 
                         'grade':grades, 'weight': weights})
     pick_k_avgs = np.zeros((n_boots, len(y_comb['grade'].unique())))
@@ -66,8 +66,18 @@ def pick_K_returns_by_grade(y_pred, returns, weights, grades, K, n_boots=100):
         pick_k_avgs[n,:] = port.sort_index().values
     return pick_k_avgs 
 
+
 def get_choice_grade_makeup(preds, grades, grade_group, unique_grades, K):
-    '''Calculate the distribution of loan grades among the top K picked loans'''
+    '''Calculate the distribution of loan grades among the top K picked loans.
+    INPUTS:
+        preds: vector of model predictions
+        grades: vector of grades
+        grade_group: name of grade grouping variable (grade or sub-grade).
+        unique_grades: specify list of possible grades (in case were looking at a subset that
+            doesnt have all examples.
+        K: portfolio size (scaler).
+    OUTPUTS:
+        pandas series of counts, keyed by grade'''
     temp_df = pd.DataFrame({'pred':preds,'grade':grades})
     temp_df.sort_values(by='pred',ascending=False,inplace=True)
     # initialize a series to ensure that all grades have a count (even if it's zero)
@@ -75,6 +85,7 @@ def get_choice_grade_makeup(preds, grades, grade_group, unique_grades, K):
     base_series['values'] = temp_df.head(K).groupby(grade_group).count().sort_index()                   
     base_series.fillna(0,inplace=True)     
     return base_series.values.squeeze() #return a numpy array of counts, ordered by indices in unique_grades
+
 
 # MODEL CLASSES
 class zip_avg_mod(sklearn.base.BaseEstimator, sklearn.base.RegressorMixin):
@@ -105,7 +116,7 @@ class zip_avg_mod(sklearn.base.BaseEstimator, sklearn.base.RegressorMixin):
 
     
 class state_avg_mod(sklearn.base.BaseEstimator, sklearn.base.RegressorMixin):
-    '''define model that just takes the within-state avgs on the training set'''
+    '''define model that takes the within-state avgs on the training set'''
     def __init__(self, min_counts = 100):
         self.state_avgs = None
         self.min_counts = min_counts
@@ -146,6 +157,7 @@ class marg_avg_mod(sklearn.base.BaseEstimator, sklearn.base.RegressorMixin):
     def score(self, X, y):
         return sklearn.metrics.r2_score(y, self.predict(X))
 
+
 class rand_pick_mod(sklearn.base.BaseEstimator, sklearn.base.RegressorMixin):
     '''define a null model that just makes random predictions'''
     def __init__(self):
@@ -162,19 +174,7 @@ class rand_pick_mod(sklearn.base.BaseEstimator, sklearn.base.RegressorMixin):
     def score(self, X, y):
         return sklearn.metrics.r2_score(y, self.predict(X))
 
-# TRANSFORMER DEFINITIONS
-# class make_dummies(sklearn.base.BaseEstimator,
-#                        sklearn.base.TransformerMixin):
-#     '''uses pandas to transform categorical variables into one-hot encoding'''
-#     def __init__(self, dummy_col):
-#         self.dummy_col = dummy_col
 
-#     def fit(self, X, y=None):
-#         return self
-
-#     def transform(self, X):
-#         dummies = pd.get_dummies(X[self.dummy_col],sparse=True)
-#         return dummies
 class make_dummies(sklearn.base.BaseEstimator,
                        sklearn.base.TransformerMixin):
     '''uses pandas to transform categorical variables into one-hot encoding'''
@@ -190,18 +190,6 @@ class make_dummies(sklearn.base.BaseEstimator,
         return self.dv.transform(X[self.dummy_cols].to_dict(orient='records'))
 
 
-# class col_selector(sklearn.base.BaseEstimator,
-#                        sklearn.base.TransformerMixin):
-#     '''uses pandas to select subset of columns'''
-#     def __init__(self, col_list):
-#         self.col_list = col_list
-
-#     def fit(self, X, y=None):
-#         return self
-
-#     def transform(self, X):
-#         X_sub = X[self.col_list]
-#         return X_sub
 class col_selector(sklearn.base.BaseEstimator,
                        sklearn.base.TransformerMixin):
     '''uses pandas to select subset of columns'''
@@ -219,7 +207,7 @@ class col_selector(sklearn.base.BaseEstimator,
 
 class log_minmax(sklearn.base.BaseEstimator,
                        sklearn.base.TransformerMixin):
-    '''uses pandas to select subset of columns'''
+    '''Transformer that first takes log1p(X) then calls the minMaxScaler transformer'''
     def __init__(self):
         self.mm_tran = MinMaxScaler()
     
