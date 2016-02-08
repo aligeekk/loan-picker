@@ -10,6 +10,7 @@ import numpy as np
 import sys
 from bs4 import BeautifulSoup
 import re
+import datetime
 
 def make_fips_to_zip_dict(data_path, group_by='zip3'):
     """Takes a csv file with 5-digit census zip-code tabulation areas, and makes a dict
@@ -258,7 +259,7 @@ def get_emp_length(emp_length):
     else:
         return 0
         
-def get_zip_loc(addrZip,loc_type):
+def get_zip_loc(addrZip, zip3_data, loc_type):
     '''Get lat or long for zip3'''
     zip3 = int(addrZip[:3])
     if zip3 in zip3_data:

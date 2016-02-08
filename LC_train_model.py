@@ -14,14 +14,14 @@ from collections import defaultdict, namedtuple
 import datetime
 import dill
 
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.base import clone
 from sklearn.pipeline import Pipeline
 from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import ShuffleSplit
-
+from sklearn.linear_model import LogisticRegression
 #base_dir = os.path.dirname(os.path.realpath(__file__))
 base_dir = '/Users/james/Data_Incubator/loan-picker'
     
@@ -87,6 +87,7 @@ predictors = [
 #%% Build X and y data
 response_var = 'ROI'
 y = LD[response_var].values  # response variable
+dp = LD['default_prob'].values  # response variable
 net_returns = LD['net_returns'].values
 prnc_weights = LD['prnc_weight'].values
    
@@ -119,6 +120,20 @@ with open(os.path.join(base_dir,'static/data/trans_tuple.pkl'),'wb') as out_strm
     dill.dump(transformer_tuple, out_strm)
     
 
+#%% Fit logistic regression to default probs
+max_depth=16
+min_samples_leaf=50
+min_samples_split=100
+n_trees=100 #100
+RF_defClass = RandomForestClassifier(n_estimators=n_trees, max_depth=max_depth, 
+                               min_samples_leaf=min_samples_leaf, 
+                               min_samples_split=min_samples_split,n_jobs=4, 
+                               max_features='auto')
+
+RF_defClass.fit(np.vstack([X, X]), np.hstack([np.ones(len(dp)), np.zeros(len(dp))]),
+        sample_weight=np.hstack([dp, 1 - dp]))
+
+
 #%% Fit Random Forest model
 max_depth=16
 min_samples_leaf=50
@@ -135,7 +150,10 @@ RF_est.fit(X,y)
 with open(os.path.join(base_dir,'static/data/LC_model.pkl'),'wb') as out_strm:
     dill.dump(RF_est, out_strm)
     
-
+with open(os.path.join(base_dir,'static/data/LC_def_model.pkl'),'wb') as out_strm:
+    dill.dump(RF_defClass, out_strm)
+    
+#%%
 '''Now get a reference set of cross-validated tuples of (pred, weight_obs, dur)
 Need to refit a separate model using a train-test split. Then use the validation set
 to generate a lookup table of predicted and measured returns, so we can estimate

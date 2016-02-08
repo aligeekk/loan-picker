@@ -26,7 +26,7 @@ def get_amortization_schedules(LD, term, calc_int = True):
             [int_sched]: [n_loans x term+1] array of scheduled interest payments by month'''
 
     n_loans = len(LD)
-    assert(LD['term'].unique() == [term],"found loan data not matching specified term")
+    assert LD['term'].unique() == [term]
     term_array = np.tile(np.arange(term+1),(n_loans,1)) #array of vectors going from 0 to term
     #array of copies of the number of payments for each loan
     num_payments_array = LD['num_pymnts'][:,np.newaxis] * np.ones((n_loans,term+1)) 
