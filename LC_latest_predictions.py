@@ -63,7 +63,11 @@ def make_record(loan, record_map):
     return record 
 
 
+<<<<<<< HEAD
 def get_latest_records(zip3_loc_data, use_grades = ['A','B','C','D','E','F']):
+=======
+def get_latest_records(use_grades = ['A','B','C','D','E','F']):
+>>>>>>> b0e5db9728d1ff1a5889281003ab127a8344d25f
     header = {'Authorization' : 'CL8mtxpJKxUjSpgjunpqV0nE1Xo=', 
               'Content-Type': 'application/json'}
     apiVersion = 'v1'
@@ -103,8 +107,13 @@ def get_latest_records(zip3_loc_data, use_grades = ['A','B','C','D','E','F']):
                 ('home_ownership', lambda x: x['homeOwnership']),
                 ('grade', lambda x: x['grade']),
                 ('purpose', lambda x: x['purpose']),
+<<<<<<< HEAD
                 ('latitude', lambda x: LCL.get_zip_loc(x['addrZip'], zip3_loc_data, 'latitude')),
                 ('longitude', lambda x: LCL.get_zip_loc(x['addrZip'], zip3_loc_data, 'longitude')))
+=======
+                ('latitude', lambda x: LCL.get_zip_loc(x['addrZip'], zip3_data, 'latitude')),
+                ('longitude', lambda x: LCL.get_zip_loc(x['addrZip'], zip3_data, 'longitude')))
+>>>>>>> b0e5db9728d1ff1a5889281003ab127a8344d25f
     
     records = [make_record(loan, record_map) for loan in loans]
     records = [record for record in records if record['grade'] in use_grades]
