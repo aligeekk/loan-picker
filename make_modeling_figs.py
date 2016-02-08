@@ -133,15 +133,7 @@ min_samples_split=100
 n_trees=100 #100
 RF_est = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth, 
                                min_samples_leaf=min_samples_leaf, 
-                               min_samples_split=min_samples_split,n_jobs=4)
-
-max_depth=20 #16
-min_samples_leaf=25
-min_samples_split=50
-n_trees=1000 #100
-RF_large = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth, 
-                               min_samples_leaf=min_samples_leaf, 
-                               min_samples_split=min_samples_split,n_jobs=4)
+                               min_samples_split=min_samples_split,n_jobs=-1)
 
 GBR_est = GradientBoostingRegressor(learning_rate=0.1, n_estimators=n_trees, 
                                 min_samples_leaf=min_samples_leaf,
@@ -183,23 +175,22 @@ else:
     Lin_model = Lin_est.set_params(alpha=100.0)
     SVR_model = svr_est.set_params(C=1.0)
     RF_model = RF_est.set_params(max_features='auto')
-    RF_large_model = RF_large.set_params(max_features='auto')
     GBR_model = GBR_est.set_params(max_features='auto',
                                     max_depth=3)
 
 
 #%% Specify set of models to test
-# model_set = [('Null',LCM.rand_pick_mod()),
-#             ('Lin', Lin_model),
-#             ('Lin_SVR',SVR_model),
-#             ('GBR',GBR_model),
-#             ('RF', RF_model)]
+model_set = [('Null',LCM.rand_pick_mod()),
+            ('Lin', Lin_model),
+            ('Lin_SVR',SVR_model),
+            ('GBR',GBR_model),
+            ('RF', RF_model)]
 # model_set = [('Null',LCM.rand_pick_mod()),
 #             ('Lin', Lin_model),
 #              ('RF', RF_model)]
-model_set = [('Null',LCM.rand_pick_mod()),
-            ('Lin', Lin_model),
-             ('RF', RF_model)]
+# model_set = [('Null',LCM.rand_pick_mod()),
+#             ('Lin', Lin_model),
+#              ('RF', RF_model)]
 
 leg_titles = {'Null':'Random\nPicking',
               'Lin':'Linear\nModel',
@@ -216,7 +207,7 @@ grade_pick_K = 100 #portfolio size for computing separate grade-based portfolio 
 n_feature_shuffs = 3 #number of times to shuffle features (at each fold) for computing feature-importances
 
 grade_group = 'grade' #either grade or sub-grade
-unique_grades = sorted(LD[grade_group].unique())train_R2 = defaultdict(list)
+unique_grades = sorted(LD[grade_group].unique())
 test_R2 = defaultdict(list)
 returns = defaultdict(list)
 marg_returns = []
@@ -436,7 +427,7 @@ use_cols = [col for col in use_cols if col != 'issue_day']
 max_depth=14
 n_trees=100
 min_samples_leaf=100
-RF_mod = RandomForestRegressor(n_estimators=n_trees, max_depth=10, max_feautres='auto',
+RF_mod = RandomForestRegressor(n_estimators=n_trees, max_depth=10, max_features='auto',
                                min_samples_leaf=min_samples_leaf, n_jobs=-1)
                         
 train_set = (LD['issue_day'] < train_day).values #bool mask for test set membership
