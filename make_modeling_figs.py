@@ -39,8 +39,8 @@ import LC_modeling as LCM
 
 #set paths
 data_dir = os.path.join(base_dir,'static/data/')
-#fig_dir = os.path.join(base_dir,'static/images/')
-fig_dir = os.path.join(base_dir,'tmp/')
+fig_dir = os.path.join(base_dir,'static/images/')
+#fig_dir = os.path.join(base_dir,'tmp/')
 
 #%%
 #load data 
@@ -188,9 +188,6 @@ model_set = [('Null',LCM.rand_pick_mod()),
 # model_set = [('Null',LCM.rand_pick_mod()),
 #             ('Lin', Lin_model),
 #              ('RF', RF_model)]
-# model_set = [('Null',LCM.rand_pick_mod()),
-#             ('Lin', Lin_model),
-#              ('RF', RF_model)]
 
 leg_titles = {'Null':'Random\nPicking',
               'Lin':'Linear\nModel',
@@ -205,8 +202,8 @@ kf = KFold(len(X), n_folds=n_folds, shuffle=True, random_state=0)
 pick_K_list = [10, 100, 1000] #list of portfolio sizes to test
 grade_pick_K = 100 #portfolio size for computing separate grade-based portfolio returns
 n_feature_shuffs = 3 #number of times to shuffle features (at each fold) for computing feature-importances
+grade_group = 'sub_grade' #either grade or sub-grade
 
-grade_group = 'grade' #either grade or sub-grade
 unique_grades = sorted(LD[grade_group].unique())
 test_R2 = defaultdict(list)
 returns = defaultdict(list)
@@ -270,7 +267,7 @@ pal = sns.color_palette("muted")
 #colors = [pal[0] if val != 'location' else pal[2] for val in feature_imp_df.index.values]
 colors = [pal[0] for val in feature_imp_df.index.values]
 bar_width = 0.75
-cutoff = 1e-4
+cutoff = 1e-3
 feature_imp_df = feature_imp_df.ix[feature_imp_df.avg >= cutoff,:]
 
 fig,ax = plt.subplots(1,1)
@@ -348,15 +345,20 @@ for idx, pick_N in enumerate(pick_K_list):
              zorder = -1)
 
 if plot_figures:
-    plt.savefig(fig_dir + 'full_mod_compare_ROI2.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'full_mod_compare_ROI.png', dpi=500, format='png')
     plt.close()
 
 
 #%% Plot proportion of grades picked by each model
+use_models = ['Null','Lin','RF']
+model_names = [name for name,_ in model_set if name in use_models]
+n_mods = len(model_names)
+
 all_dfs = []
 for name,_ in model_set:
-    all_dfs.append(pd.DataFrame({'values':np.mean(grade_makeup[name],axis=0)/100.,'Model':name},
-                                index=unique_grades))
+    if name in use_models:
+        all_dfs.append(pd.DataFrame({'values':np.mean(grade_makeup[name],axis=0)/100.,'Model':name},
+                        index=unique_grades))
 
 makeup_df = pd.concat(all_dfs,axis=0).reset_index()
 makeup_df=makeup_df.rename(columns={'index':'grade'})
@@ -364,6 +366,16 @@ fig,ax=plt.subplots(figsize=(5.0,4.0))
 pal = sns.cubehelix_palette(n_colors=len(unique_grades))
 sns.barplot(x='Model',y='values',data=makeup_df,hue='grade',palette=pal,
             hue_order=unique_grades,ax=ax)
+
+if grade_group == 'sub_grade':
+    ax.legend_.remove()
+    n_subgrades=5
+    big_grades = ['A','B','C','D','E','F']
+    big_grade_idx = np.arange(6)*n_subgrades + n_subgrades//2
+    for idx in big_grade_idx:
+        leg_hands.append(mlines.Line2D([],[],linewidth=4, color=pal[idx]))
+    ax.legend(leg_hands,big_grades)
+    
 plt.ylabel('Proportion of picked loans',fontsize=16)
 plt.xlabel('Selection Method',fontsize=16)
 plt.tight_layout()
@@ -377,7 +389,8 @@ grades = np.sort(LD[grade_group].unique())
 best_returns = LD.groupby(grade_group)['best_NAR'].mean() * 100
 best_returns.sort_index(inplace=True)
 
-model_names = [name for name,_ in model_set]
+use_models = ['Null','Lin','RF']
+model_names = [name for name,_ in model_set if name in use_models]
 n_mods = len(model_names)
 #mod_names = ['Random','Linear','Linear SVR','Gradient Boosting','Random Forest']
 pal = sns.color_palette("muted", n_colors=len(model_names))
@@ -392,22 +405,23 @@ for idx, mod_name in enumerate(model_names):
     plt.errorbar(np.arange(len(grades)) + idx*jitt_x/n_mods - jitt_x/(2.),
                  np.mean(grade_returns[mod_name],axis=0),
                  np.std(grade_returns[mod_name],axis=0)/err_norm, 
-                color=pal[idx], label=model_names[idx], lw=2, fmt='o', ms=10, alpha=alpha)
+                color=pal[idx], label=model_names[idx], lw=2, fmt='-', ms=10, alpha=alpha)
                  
 plt.plot(np.arange(len(grades)), best_returns,'ko--',lw=2, 
              label='Best')
              
-plt.xlim(-0.4, 5.2)
-plt.ylim(0,25)
+plt.xlim(-0.4, len(grades)+0.4)
+plt.ylim(0,30)
 grades = np.concatenate(([''],grades))
-ax.set_xticklabels(grades, fontsize=14)
+ax.set_xticks(np.arange(len(grades))-1)
+ax.set_xticklabels(grades, fontsize=12,rotation='vertical')
 plt.xlabel('Loan Grade',fontsize=16)
 plt.ylabel('Annualized ROI (%)',fontsize=16)
 plt.legend(loc='best', fontsize=14)
 plt.tight_layout()
 
 if plot_figures:
-    plt.savefig(fig_dir + 'grade_returns_ROI2.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'grade_returns_ROI.png', dpi=500, format='png')
     plt.close()
 
 
