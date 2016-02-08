@@ -33,7 +33,9 @@ import LC_modeling as LCM
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 
 #get lat/long coordinates for each 3-digit zip
-zip3_data = LCL.load_location_data(data_dir,group_by='zip3')        
+zip3_loc_path = os.path.join(data_dir,'zip3_loc_data.p')
+with open(zip3_loc_path,'rb') as in_strm:
+    zip3_loc_data = dill.load(in_strm)       
 
 #%% Load in model and transformer
 def load_pickled_models():
