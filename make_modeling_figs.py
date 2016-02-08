@@ -199,7 +199,7 @@ leg_titles = {'Null':'Random\nPicking',
               'RF':'Random\nForest'}
 
 #%% Compute returns for all models using K-fold cross-val
-n_folds = 5
+n_folds = 10
 kf = KFold(len(X), n_folds=n_folds, shuffle=True, random_state=0)
 
 pick_K_list = [10, 100, 1000] #list of portfolio sizes to test
@@ -394,8 +394,8 @@ for idx, mod_name in enumerate(model_names):
                  np.std(grade_returns[mod_name],axis=0)/err_norm, 
                 color=pal[idx], label=model_names[idx], lw=2, fmt='o', ms=10, alpha=alpha)
                  
-plt.plot(np.arange(len(grades)), best_returns,'k',lw=2, 
-             ls='dashed', label='Best possible')
+plt.plot(np.arange(len(grades)), best_returns,'ko--',lw=2, 
+             label='Best')
              
 plt.xlim(-0.4, 5.2)
 plt.ylim(0,25)
