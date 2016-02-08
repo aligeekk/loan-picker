@@ -1,4 +1,4 @@
-pandas
+#pandas
 #bokeh=0.10.0
 #matplotlib
 #seaborn
