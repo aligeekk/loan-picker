@@ -67,12 +67,11 @@ def pick_K_returns_by_grade(y_pred, returns, weights, grades, K, n_boots=100):
     return pick_k_avgs 
 
 
-def get_choice_grade_makeup(preds, grades, grade_group, unique_grades, K):
+def get_choice_grade_makeup(preds, grades, unique_grades, K):
     '''Calculate the distribution of loan grades among the top K picked loans.
     INPUTS:
         preds: vector of model predictions
         grades: vector of grades
-        grade_group: name of grade grouping variable (grade or sub-grade).
         unique_grades: specify list of possible grades (in case were looking at a subset that
             doesnt have all examples.
         K: portfolio size (scaler).
