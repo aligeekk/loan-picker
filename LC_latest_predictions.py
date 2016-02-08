@@ -30,6 +30,8 @@ import LC_helpers as LCH
 import LC_loading as LCL
 import LC_modeling as LCM
 
+plot_figures = True
+
 predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
 
 #%% Load in model and transformer
@@ -100,6 +102,7 @@ use_grades = ['A','B','C','D','E','F']
 records = [record for record in records if record['grade'] in use_grades]
 grades = [rec['grade'] for rec in records]
 loan_ids = [rec['id'] for rec in records]
+
 #%% Build X mat for new loan data
 X_rec = dict_vect.transform(records) #use the preloaded dict vectorizer
 
@@ -124,17 +127,20 @@ predictions.sort_values(by='returns', ascending=False, inplace=True)
 #%%
 pick_K = 100
 
-grade_order = sorted(predictions.grades.unique())
-pal = sns.cubehelix_palette(n_colors=len(grade_order))
-sns.lmplot(x='dp',y='returns',data=predictions,hue='grades',
-           hue_order = grade_order, fit_reg=False, 
-           palette=pal, legend=False)
-plt.plot(predictions.iloc[:pick_K]['dp'],predictions.iloc[:pick_K]['returns'],'r.',
-        ms=10, label='picked')
-plt.legend(loc='lower left')
-plt.xlabel('Default probability',fontsize=14)
-plt.ylabel('Predicted annual returns (%)',fontsize=14)
-plt.margins(.01, .01)
+if plot_figures:
+    
+    grade_order = sorted(predictions.grades.unique())
+    pal = sns.cubehelix_palette(n_colors=len(grade_order))
+    sns.lmplot(x='dp',y='returns',data=predictions,hue='grades',
+               hue_order = grade_order, fit_reg=False, 
+               palette=pal, legend=False)
+    plt.plot(predictions.iloc[:pick_K]['dp'],predictions.iloc[:pick_K]['returns'],'r.',
+            ms=10, label='picked')
+    plt.legend(loc='lower left')
+    plt.xlabel('Default probability',fontsize=14)
+    plt.ylabel('Predicted annual returns (%)',fontsize=14)
+    plt.margins(.01, .01)   
+
 #%% Load and unpack validation lookup-table data
 with open(os.path.join(base_dir,'static/data/LC_test_res.pkl'),'rb') as in_strm:
     val_set = dill.load(in_strm)

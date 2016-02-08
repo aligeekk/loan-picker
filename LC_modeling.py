@@ -78,11 +78,11 @@ def get_choice_grade_makeup(preds, grades, grade_group, unique_grades, K):
         K: portfolio size (scaler).
     OUTPUTS:
         pandas series of counts, keyed by grade'''
-    temp_df = pd.DataFrame({'pred':preds,'grade':grades})
+    temp_df = pd.DataFrame({'pred':preds, 'grade':grades})
     temp_df.sort_values(by='pred',ascending=False,inplace=True)
     # initialize a series to ensure that all grades have a count (even if it's zero)
     base_series = pd.DataFrame({'values':np.zeros(len(unique_grades))}, index=unique_grades)
-    base_series['values'] = temp_df.head(K).groupby(grade_group).count().sort_index()                   
+    base_series['values'] = temp_df.head(K).groupby('grade').count().sort_index()                   
     base_series.fillna(0,inplace=True)     
     return base_series.values.squeeze() #return a numpy array of counts, ordered by indices in unique_grades
 

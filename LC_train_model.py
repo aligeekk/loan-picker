@@ -10,9 +10,12 @@ import sys
 import re
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from collections import defaultdict, namedtuple
 import datetime
 import dill
+import matplotlib.pylab as plt
+import matplotlib.lines as mlines
 
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler, MinMaxScaler, RobustScaler
@@ -33,7 +36,8 @@ import LC_modeling as LCM
 
 #set paths
 data_dir = os.path.join(base_dir,'static/data/')
-
+fig_dir = os.path.join(base_dir,'static/images/')
+plot_figures = True
 #%%
 #load data 
 data_name = 'all_loans_proc'
@@ -119,8 +123,7 @@ transformer_tuple = (dict_vect, col_dict, tran_dict, predictors)
 with open(os.path.join(base_dir,'static/data/trans_tuple.pkl'),'wb') as out_strm:
     dill.dump(transformer_tuple, out_strm)
     
-
-#%% Fit logistic regression to default probs
+#%% Fit random forest classifier for predicting default probabilities
 max_depth=16
 min_samples_leaf=50
 min_samples_split=100
@@ -130,9 +133,18 @@ RF_defClass = RandomForestClassifier(n_estimators=n_trees, max_depth=max_depth,
                                min_samples_split=min_samples_split,n_jobs=4, 
                                max_features='auto')
 
-RF_defClass.fit(np.vstack([X, X]), np.hstack([np.ones(len(dp)), np.zeros(len(dp))]),
-        sample_weight=np.hstack([dp, 1 - dp]))
-
+'''To train the classifier using default probs (rather than just class labels)
+as target variables, make a copy of all the data whose class is not observed,
+one for each class label, with the default probs counting as sample_weights'''
+is_observed = LD.is_observed.values
+X_NO = X[~is_observed,:]
+dp_NO = dp[~is_observed]
+X_NO = np.vstack([X_NO, X_NO])
+class_NO = np.hstack([np.ones(len(dp_NO)), np.zeros(len(dp_NO))])
+sample_NO = np.hstack([dp_NO, 1 - dp_NO])
+RF_defClass.fit(np.vstack([X[is_observed,:], X_NO]), 
+                np.hstack([dp[is_observed], class_NO]),
+                sample_weight=np.hstack([np.ones(np.sum(is_observed)), sample_NO]))
 
 #%% Fit Random Forest model
 max_depth=16
@@ -146,7 +158,37 @@ RF_est = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth,
 
 RF_est.fit(X,y)
 
-#%% Save Random Forest model
+#%% Plot relationship between predicted returns and default prob
+if plot_figures:
+    pred_ret = RF_est.predict(X)
+    pred_dp = RF_defClass.predict_proba(X)
+    df = pd.DataFrame({'ret':pred_ret * 100, 'dp':pred_dp[:,1], 'grade': LD['grade']})
+    
+    grade_order = sorted(LD['grade'].unique())
+    
+    pal = sns.cubehelix_palette(n_colors=len(grade_order))
+    fgrid = sns.lmplot(x='ret', y='dp', data=df, hue='grade', fit_reg=False,
+               hue_order = grade_order, legend=False, palette=pal,
+               size=4.0, aspect=1.2,
+               scatter_kws={'s':4, 'alpha':0.25})
+    ax = fgrid.axes[0][0]
+    leg_hands = []
+    leg_labels = []
+    for idx, grade in enumerate(grade_order):
+        leg_hands.append(mlines.Line2D([],[],marker='.',linewidth=0,
+                                       markersize=12,color=pal[idx]))
+        leg_labels.append(grade)
+    ax.legend(leg_hands, leg_labels, loc='lower left',fontsize=12)
+    
+    plt.xlabel('Predicted annual returns (%)',fontsize=14)
+    plt.ylabel('Predicted default probability',fontsize=14)
+    plt.xlim(-10,20)
+    plt.ylim(0,0.35)
+    plt.tick_params(axis='both', which='major', labelsize=10)
+    plt.savefig(fig_dir + 'ret_dp_compare.png', dpi=500, format='png')
+    plt.close()
+
+#%% Save Random Forest models
 with open(os.path.join(base_dir,'static/data/LC_model.pkl'),'wb') as out_strm:
     dill.dump(RF_est, out_strm)
     
