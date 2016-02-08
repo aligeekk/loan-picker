@@ -21,6 +21,7 @@ from bs4 import BeautifulSoup
 import LC_helpers as LCH
 import LC_loading as LCL
 import LC_bokeh_plotting as LC_bok
+from LC_forms import *
 import dill
 
 app_title = 'Loan Picker' 
@@ -58,71 +59,6 @@ purpose_map = {'debt_consolidation':'debt',
 app = Flask(__name__)
 app.secret_key = '\xb6\xbcr\xc4\xb5\x9cY\x03\xcdI\x15oR:\xdbJD\xb1c\x00+\x1c\x926'
 
-class map_form(Form):
-    '''Form for generating plots of different loan features based on the borrowers 
-    geographic location (3-digit zip or state)'''
-
-    grouping_vars = [('addr_state', 'by state'), 
-                     ('zip3', 'by 3-digit zip')]
-    group_dict = {key: val for key, val in grouping_vars}
-
-    # tuple containing different agg functions (internal_name, human_readable)
-    agg_funs = [('count', 'count'), 
-                ('mean', 'mean'),
-                ('std', 'std dev'),
-                ('median', 'median')]               
-    agg_dict = {key: val for key, val in agg_funs}
-
-    # variable to plot. tuple as (internal_name, human_readable)
-    response_vars = [('ROI', 'returns'), 
-                     ('int_rate', 'interest rate'),
-                     ('annual_inc', 'annual income'),
-                     ('default_prob', 'default probability'),
-                     ('dti', 'debt-to-income ratio'),
-                     ('emp_length', 'employment length')]
-    var_dict = {key: val for key,val in response_vars}
-  
-    grouping_var = RadioField('grouping', choices=grouping_vars,
-                              validators=[DataRequired()],default='zip3')
-    agg_fun = RadioField('agg', choices=agg_funs,
-                         validators=[DataRequired()],default='mean')
-    col_name = RadioField('response', choices=response_vars,
-                          validators=[DataRequired()],
-                          default='ROI')
-  
-
-class ts_form(Form):
-    '''Make form for getting user input about how to generate a plot by loan issue date'''
-    
-    grouping_vars = [('loan_status','loan status'),
-                     ('term','loan duration'),                    
-                     ('home_ownership','home ownership'),
-                     ('grade','loan grade'),
-                     ('short_purpose','loan purpose'),
-                     ('quantiles','quantiles')]
-    group_dict = {key: val for key,val in grouping_vars}
-
-    response_vars = [('ROI', 'returns'),
-                     ('int_rate','interest rate'),
-                     ('dti','debt-to-income ratio'),
-                     ('default_prob','default probability'),
-                     ('annual_inc','annual income'),
-                     ('emp_length','employment length')]
-    
-    col_name = RadioField(choices=response_vars, validators=[DataRequired()], default='ROI')
-    grouping_var = RadioField('Label', choices=grouping_vars, default='short_purpose')
-    smooth_span = IntegerField('Smoothing', 
-                               [NumberRange(min=0, max=24, message="Max smoothing 2 years")], default=10)                                
-    num_quantiles = IntegerField('Number of quantiles', 
-                               [NumberRange(min=1, max=20, message="Max 20 quantiles")], default=5)
-
-
-class smoothing_form(Form):
-    '''Make form for grabbing UI from the time-series plot page. At this point just lets you adjust the 
-    amount of smoothing to apply'''
-    smooth_span = IntegerField('Smoothing', 
-                               [NumberRange(min=0, max=24, message="Max smoothing 2 years")], default=10)
-
 #%%
 LD = pd.read_csv(data_dir + data_name, parse_dates=['issue_d'])
 # LD['issue_d'] = pd.to_datetime(LD['issue_d'],format = '%Y-%m-%d',unit='D')
@@ -131,6 +67,11 @@ print('loaded {0} loans'.format(len(LD)))
 #load lookup tables for converting zips and states to county FIPS codes for plotting
 fips_to_zip = dill.load(open(data_dir + 'fips_to_zip.p', "rb" ) )
 state_fips_dict = dill.load(open(data_dir + 'state_fips_dict.p',"rb"))
+
+#get lat/long coordinates for each 3-digit zip
+zip3_loc_path = os.path.join(data_dir,'zip3_loc_data.p')
+with open(zip3_loc_path,'rb') as in_strm:
+    zip3_loc_data = dill.load(in_strm)       
 
 # precompute additional columns for convenience when plotting
 LD['short_purpose'] = LD['purpose'].map(purpose_map)
