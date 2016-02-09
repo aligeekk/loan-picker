@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container">
+
+	<div class="blog-header">
+		<h1 class="blog-title">Predict returns on currently available loans</h1>
+<!-- 		<p class="lead blog-description">Blah blah.</p>
+-->	
+</div>
+
+<div class="row">
+	<div class="col-sm-12 blog-main">
+
+		<!-- POST ABOUT DIFFERENT LOAN STATUSES-->
+		<div class="blog-post" style="position:absolute;top:0px;">
+			<form action="" method="post" name="cl_form">
+						<p><b>Target portfolio size</b>{{ cl_form.port_size}}</p>
+						<p><b>Maximum default prob.</b>{{ cl_form.max_dp}}</p>
+						<p><b>Included Grades: A {{ cl_form.use_A}}   B {{ cl_form.use_B}}   C {{ cl_form.use_C}}   D {{ cl_form.use_D}}   E {{ cl_form.use_E}}   F {{ cl_form.use_F}}</b></p>
+					<div class="col-sm-2">
+					<p><input class="btn btn-success" type="Submit" value="Submit"></p>
+					</div>
+					<div class="col-sm-2">			
+						<a href="update_loans" class="btn btn-danger" role="button">Update loan data</a>
+					</div>
+
+			</form>
+		<div class="row">
+			{% if pick_K == 0%}
+			<div class="col-sm-12">
+				<p> No loans found that match the desired criteria.</p>
+			<div class="col-sm-6">
+			<img class="img-responsive center-block" src="/static/images/cl_dp_ret.png?{{rnum}}" width="700"></img>
+			</div>	
+			</div>
+
+			{% else %}
+			<div class="col-sm-12">
+				<p> Found {{pick_K}} loans matching desired criteria.</p>
+			</div>
+			<div class="col-sm-6">
+			<img class="img-responsive center-block" src="/static/images/cl_dp_ret.png?{{rnum}}" width="700"></img>
+			</div>	
+			<div class="col-sm-6">
+			<img class="img-responsive center-block" src="/static/images/cl_ret_dist.png?{{rnum}}" width="700"></img>
+			</div>
+			{% endif %}
+		</div>
+		<br>
+		<h3>Lending Club IDs from selected loans:</h3>
+		<p><small>{{loan_ids}}</small></p>
+		</div>
+	</div>
+</div>
+
+
+{% endblock %}

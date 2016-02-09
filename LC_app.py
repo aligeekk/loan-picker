@@ -7,7 +7,7 @@ Runs web app for Data Incubator capstone project analyzing Lending Club p2p data
 """
 
 from flask import Flask, render_template, request, redirect, url_for, Markup
-from wtforms import Form, RadioField, IntegerField, SelectMultipleField, IntegerField
+from wtforms import Form, RadioField, IntegerField, SelectMultipleField, IntegerField, BooleanField
 from wtforms.validators import DataRequired, NumberRange
 import matplotlib
 # Force matplotlib to not use any Xwindows backend. Needed for generating figs on DO box
@@ -16,13 +16,20 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import re
+import os
+from collections import defaultdict, namedtuple
+
 import pandas as pd
 from bs4 import BeautifulSoup
 import LC_helpers as LCH
 import LC_loading as LCL
 import LC_bokeh_plotting as LC_bok
+import LC_latest_predictions as LCP
 from LC_forms import *
 import dill
+import json
+
+auth_keys = json.load(open("auth_keys.txt",'r'))
 
 app_title = 'Loan Picker' 
 
@@ -33,12 +40,12 @@ map_name = 'USA_Counties_raw.svg' #base svg map of US with counties
 
 # dict of axis labels corresponding to different features we might be plotting
 name_legend_map = {'counts': 'Number of loans (thousands)',
-			  'ROI': 'ROI (%)',
-			  'int_rate': 'interest rate (%)',
-			  'default_prob': 'default probability',
-			   'dti': 'Debt-to-income ratio',
-			   'emp_length':'employment length (months)',
-                    'annual_inc':'annual income ($)'}
+			            'ROI': 'ROI (%)',
+			            'int_rate': 'interest rate (%)',
+			            'default_prob': 'default probability',
+			            'dti': 'Debt-to-income ratio',
+			            'emp_length':'employment length (months)',
+                  'annual_inc':'annual income ($)'}
 
 # dict for making a coarser grouping of loan purposes for plotting purposes
 purpose_map = {'debt_consolidation':'debt',
@@ -57,7 +64,7 @@ purpose_map = {'debt_consolidation':'debt',
               'educational':'other'}
 
 app = Flask(__name__)
-app.secret_key = '\xb6\xbcr\xc4\xb5\x9cY\x03\xcdI\x15oR:\xdbJD\xb1c\x00+\x1c\x926'
+app.secret_key = auth_keys['app_key']
 
 #%%
 LD = pd.read_csv(data_dir + data_name, parse_dates=['issue_d'])
@@ -80,6 +87,15 @@ LD['issue_year'] = LD['issue_d'].dt.year
 # load base map and get state and county paths
 app.base_map = LCL.load_base_map(fig_dir + map_name)
 (app.county_paths,app.state_paths) = LCL.get_map_paths(app.base_map,fips_to_zip)
+
+predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
+model_data = LCP.load_pickled_models()
+sim_lookup = LCP.get_validation_data()
+
+#%%
+use_grades = ['A','B','C','D','E','F']
+predictions = LCP.get_LC_loans(auth_keys['LC_auth_key'], model_data,
+                               zip3_loc_data, use_grades)
 
 #%%
 @app.route('/') #redirect to index page
@@ -161,6 +177,44 @@ def time_series():
                                                  n_quantiles=app.ts_form.data['num_quantiles'])
     return render_template('time_series.html', script=script, div=div, 
                            ts_form=app.ts_form, sform=sform, leg_map=name_legend_map) #if request method was GET
+
+
+# page with form for generating time-based plots
+@app.route('/current_loans',methods=['GET','POST'])
+def current_loans():
+    mform = cl_form(request.form)          
+    bool_vals = {'use_A':'A','use_B':'B','use_C':'C','use_D':'D',
+                 'use_E':'E','use_F':'F'}
+    constraints = {}
+    constraints['use_grades'] = [bool_vals[key] for key in bool_vals.keys() \
+                                if mform.data[key]]
+    constraints['max_dp'] = mform.data['max_dp']
+    
+    allowed_loans = predictions[(predictions.dp <= constraints['max_dp']) & \
+                                (predictions.grades.isin(constraints['use_grades']))]
+    pick_K = min([mform.data['port_size'], len(allowed_loans)])
+    loan_ids_string = ', '.join(allowed_loans[:pick_K]['ids'].values.astype(str))
+    fig = LCP.make_dp_ret_figure(predictions, pick_K, allowed_loans)
+    plt.savefig(fig_dir + 'cl_dp_ret.png', dpi=500, format='png')
+    plt.close()
+    
+    if pick_K > 0:
+        fig = LCP.make_return_dist_fig(sim_lookup, allowed_loans, pick_K)
+        plt.savefig(fig_dir + 'cl_ret_dist.png', dpi=500, format='png')
+        plt.close()
+        
+    return render_template('current_loans.html', cl_form=mform, 
+                           pick_K=pick_K, rnum=np.random.randint(0,100000),
+                            loan_ids=loan_ids_string) 
+
+
+# Load latest LC data
+@app.route('/update_loans',methods=['GET'])
+def update_loans():
+    print('grabbing latest loans')
+    predictions = LCP.get_LC_loans(auth_keys['LC_auth_key'], model_data, 
+                                   zip3_loc_data, use_grades)
+    return redirect('/current_loans') 
 
 
 if __name__ == '__main__':

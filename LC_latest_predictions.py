@@ -30,12 +30,6 @@ import LC_helpers as LCH
 import LC_loading as LCL
 import LC_modeling as LCM
 
-predictor = namedtuple('predictor', ['col_name', 'full_name', 'norm_type'])
-
-#get lat/long coordinates for each 3-digit zip
-zip3_loc_path = os.path.join(data_dir,'zip3_loc_data.p')
-with open(zip3_loc_path,'rb') as in_strm:
-    zip3_loc_data = dill.load(in_strm)       
 
 #%% Load in model and transformer
 def load_pickled_models():
@@ -63,12 +57,8 @@ def make_record(loan, record_map):
     return record 
 
 
-<<<<<<< HEAD
-def get_latest_records(zip3_loc_data, use_grades = ['A','B','C','D','E','F']):
-=======
-def get_latest_records(use_grades = ['A','B','C','D','E','F']):
->>>>>>> b0e5db9728d1ff1a5889281003ab127a8344d25f
-    header = {'Authorization' : 'CL8mtxpJKxUjSpgjunpqV0nE1Xo=', 
+def get_latest_records(auth_key, zip3_loc_data, use_grades = ['A','B','C','D','E','F']):
+    header = {'Authorization' : auth_key, 
               'Content-Type': 'application/json'}
     apiVersion = 'v1'
     loanListURL = 'https://api.lendingclub.com/api/investor/' + apiVersion + \
@@ -107,13 +97,8 @@ def get_latest_records(use_grades = ['A','B','C','D','E','F']):
                 ('home_ownership', lambda x: x['homeOwnership']),
                 ('grade', lambda x: x['grade']),
                 ('purpose', lambda x: x['purpose']),
-<<<<<<< HEAD
                 ('latitude', lambda x: LCL.get_zip_loc(x['addrZip'], zip3_loc_data, 'latitude')),
                 ('longitude', lambda x: LCL.get_zip_loc(x['addrZip'], zip3_loc_data, 'longitude')))
-=======
-                ('latitude', lambda x: LCL.get_zip_loc(x['addrZip'], zip3_data, 'latitude')),
-                ('longitude', lambda x: LCL.get_zip_loc(x['addrZip'], zip3_data, 'longitude')))
->>>>>>> b0e5db9728d1ff1a5889281003ab127a8344d25f
     
     records = [make_record(loan, record_map) for loan in loans]
     records = [record for record in records if record['grade'] in use_grades]
@@ -145,18 +130,21 @@ def get_model_predictions(X, model_data, loan_grades, loan_ids):
     return predictions
 
 #%%
-def make_dp_ret_figure(predictions):
-    
+def make_dp_ret_figure(predictions, pick_K, allowed_loans):
+            
     grade_order = sorted(predictions.grades.unique())
     pal = sns.cubehelix_palette(n_colors=len(grade_order))
     sns.lmplot(x='dp',y='returns',data=predictions,hue='grades',
                hue_order = grade_order, fit_reg=False, 
                palette=pal, legend=False, size=4.0, aspect=1.2)
-    plt.plot(predictions.iloc[:pick_K]['dp'],predictions.iloc[:pick_K]['returns'],'r.',
+        
+    pick_K = min([pick_K, len(allowed_loans)])
+    plt.plot(allowed_loans.iloc[:pick_K]['dp'],allowed_loans.iloc[:pick_K]['returns'],'r.',
             ms=10, label='picked')
-    plt.legend(loc='lower left')
-    plt.xlabel('Default probability',fontsize=14)
+    plt.legend(loc='lower left', fontsize=12)
+    plt.xlabel('Predicted default probability',fontsize=14)
     plt.ylabel('Predicted annual returns (%)',fontsize=14)
+    plt.title('Selected Loans', fontsize=18)
     plt.margins(.01, .01)   
     return plt.gcf()
     
@@ -173,7 +161,7 @@ def get_validation_data():
     return sim_lookup
   
 #%%
-def make_return_dist_fig(sim_lookup, pick_K, predictions, n_bins=200, n_boots=5000):
+def make_return_dist_fig(sim_lookup, predictions, pick_K=100, n_bins=200, n_boots=5000):
 
     sim_net = sim_lookup['net_ret'].values
     sim_weights = sim_lookup['weights'].values
@@ -190,33 +178,26 @@ def make_return_dist_fig(sim_lookup, pick_K, predictions, n_bins=200, n_boots=50
     sim_returns = np.sum(sim_net[boot_samps], axis=1) / np.sum(sim_weights[boot_samps], axis=1)                
     sim_returns = LCM.annualize_returns(sim_returns)
     
-    fig,ax=plt.subplots(figsize=(4.0,3.0))
+    fig,ax=plt.subplots(figsize=(5.0,4.0))
     sns.distplot(sim_returns,bins=100, hist=False, rug=False,
                  ax=ax, kde_kws={'color':'k','lw':3})
     plt.xlabel('Annual returns (%)',fontsize=14)
     plt.ylabel('Probability (%)',fontsize=14)
-    
+    plt.title('Estimated portfolio returns', fontsize=18)
     plt.tick_params(axis='both', which='major', labelsize=10)
     plt.margins(.01, .01)   
     plt.tight_layout()
     return fig
     
-#%%
-model_data = load_pickled_models()
-
-use_grades = ['A','B','C','D','E','F']
-records = get_latest_records(use_grades)
-
-loan_grades = [rec['grade'] for rec in records]
-loan_ids = [rec['id'] for rec in records]
-
-X = transform_records(records, model_data)
-predictions = get_model_predictions(X, model_data, loan_grades, loan_ids)
+    
+def get_LC_loans(auth_key, model_data, zip3_loc_data, use_grades):
+    records = get_latest_records(auth_key, zip3_loc_data, use_grades)   
+    print('Succesfully pulled latest LC records')
+    
+    loan_grades = [rec['grade'] for rec in records]
+    loan_ids = [rec['id'] for rec in records]
+    
+    X = transform_records(records, model_data)
+    predictions = get_model_predictions(X, model_data, loan_grades, loan_ids)
  
-pick_K = 100
-fig = make_dp_ret_figure(predictions)
-
-sim_lookup = get_validation_data()
-
-fig2 = make_return_dist_fig(sim_lookup, pick_K, predictions)
-
+    return predictions
