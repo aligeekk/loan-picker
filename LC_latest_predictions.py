@@ -20,8 +20,8 @@ from sklearn.preprocessing import MaxAbsScaler, StandardScaler, MinMaxScaler, Ro
 from sklearn.feature_extraction import DictVectorizer
 from collections import defaultdict, namedtuple
 
-#base_dir = os.path.dirname(os.path.realpath(__file__))
-base_dir = '/Users/james/Data_Incubator/loan-picker'
+base_dir = os.path.dirname(os.path.realpath(__file__))
+# base_dir = '/Users/james/Data_Incubator/loan-picker'
 sys.path.append(base_dir)
 
 data_dir = os.path.join(base_dir,'static/data/')
