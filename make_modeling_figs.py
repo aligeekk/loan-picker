@@ -10,6 +10,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import numpy as np
 import seaborn as sns
 import pandas as pd
@@ -196,7 +197,7 @@ leg_titles = {'Null':'Random\nPicking',
               'RF':'Random\nForest'}
 
 #%% Compute returns for all models using K-fold cross-val
-n_folds = 10
+n_folds = 5
 kf = KFold(len(X), n_folds=n_folds, shuffle=True, random_state=0)
 
 pick_K_list = [10, 100, 1000] #list of portfolio sizes to test
@@ -241,7 +242,7 @@ for train, test in kf:
                             LD.iloc[test][grade_group], grade_pick_K))
                             
      grade_makeup[name][cnt,:] = LCM.get_choice_grade_makeup(test_pred, LD.iloc[test][grade_group], 
-                                                            grade_group, unique_grades, grade_pick_K)     
+                                                             unique_grades, grade_pick_K)     
  cnt += 1
 
 # Annualize portfolio returns, and convert them into numpy arrays as needed
@@ -371,6 +372,7 @@ if grade_group == 'sub_grade':
     ax.legend_.remove()
     n_subgrades=5
     big_grades = ['A','B','C','D','E','F']
+    leg_hands = []
     big_grade_idx = np.arange(6)*n_subgrades + n_subgrades//2
     for idx in big_grade_idx:
         leg_hands.append(mlines.Line2D([],[],linewidth=4, color=pal[idx]))
