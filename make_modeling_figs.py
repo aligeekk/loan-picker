@@ -197,7 +197,7 @@ leg_titles = {'Null':'Random\nPicking',
               'RF':'Random\nForest'}
 
 #%% Compute returns for all models using K-fold cross-val
-n_folds = 5
+n_folds = 10
 kf = KFold(len(X), n_folds=n_folds, shuffle=True, random_state=0)
 
 pick_K_list = [10, 100, 1000] #list of portfolio sizes to test
@@ -268,7 +268,7 @@ pal = sns.color_palette("muted")
 #colors = [pal[0] if val != 'location' else pal[2] for val in feature_imp_df.index.values]
 colors = [pal[0] for val in feature_imp_df.index.values]
 bar_width = 0.75
-cutoff = 1e-3
+cutoff = 1e-4
 feature_imp_df = feature_imp_df.ix[feature_imp_df.avg >= cutoff,:]
 
 fig,ax = plt.subplots(1,1)
