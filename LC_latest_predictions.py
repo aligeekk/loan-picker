@@ -139,12 +139,13 @@ def make_dp_ret_figure(predictions, pick_K, allowed_loans):
                palette=pal, legend=False, size=4.0, aspect=1.2)
         
     pick_K = min([pick_K, len(allowed_loans)])
-    plt.plot(allowed_loans.iloc[:pick_K]['dp'],allowed_loans.iloc[:pick_K]['returns'],'r.',
-            ms=10, label='picked')
+    if pick_K != 0:
+        plt.plot(allowed_loans.iloc[:pick_K]['dp'],allowed_loans.iloc[:pick_K]['returns'],'r.',
+                ms=10, label='picked')
+        plt.title('Selected Loans', fontsize=18)
     plt.legend(loc='lower left', fontsize=12)
     plt.xlabel('Predicted default probability',fontsize=14)
     plt.ylabel('Predicted annual returns (%)',fontsize=14)
-    plt.title('Selected Loans', fontsize=18)
     plt.margins(.01, .01)   
     return plt.gcf()
     
@@ -191,9 +192,7 @@ def make_return_dist_fig(sim_lookup, predictions, pick_K=100, n_bins=200, n_boot
     
     
 def get_LC_loans(auth_key, model_data, zip3_loc_data, use_grades):
-    records = get_latest_records(auth_key, zip3_loc_data, use_grades)   
-    print('Succesfully pulled latest LC records')
-    
+    records = get_latest_records(auth_key, zip3_loc_data, use_grades)       
     loan_grades = [rec['grade'] for rec in records]
     loan_ids = [rec['id'] for rec in records]
     

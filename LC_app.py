@@ -28,10 +28,12 @@ import LC_latest_predictions as LCP
 from LC_forms import *
 import dill
 import json
+import time
 
 auth_keys = json.load(open("auth_keys.txt",'r'))
 
 app_title = 'Loan Picker' 
+refresh_loan_time = 3600 * 4 #refresh current loans every this many seconds
 
 data_dir = 'static/data/'
 fig_dir = 'static/images/'
@@ -94,18 +96,22 @@ sim_lookup = LCP.get_validation_data()
 
 #%%
 use_grades = ['A','B','C','D','E','F']
+load_time = time.time()
+print('Grabbing loan data at {}'.format(load_time))
 predictions = LCP.get_LC_loans(auth_keys['LC_auth_key'], model_data,
                                zip3_loc_data, use_grades)
-
+                               
 #%%
 @app.route('/') #redirect to index page
 def main():
     return redirect('/index')
 
+
 # page where user selects desired stock features to plot
 @app.route('/index',methods=['GET'])
 def index():
     return render_template('home.html', app_title=app_title) #if request method was GET
+
 
 # form page for making plots by borrower location
 @app.route('/loan_mapping', methods=['GET','POST'])
@@ -132,6 +138,7 @@ def loan_mapping(map_rendered=False):
     return render_template('loan_mapping.html', map_form=mform, svg=Markup(str(app.base_map)),
                 rnum=np.random.randint(0,100000), map_rendered=map_rendered) 
 
+
 # reset map and redirect to loan form page
 @app.route('/reset_map',methods=['GET'])
 def reset_map():
@@ -140,15 +147,18 @@ def reset_map():
     (app.county_paths,app.state_paths) = LCL.get_map_paths(app.base_map,fips_to_zip)
     return redirect('/loan_mapping') 
 
+
 # page with analysis details
 @app.route('/details',methods=['GET'])
 def details():
     return render_template('details.html', rnum=np.random.randint(0,100000)) 
 
+
 # page with modeling results
 @app.route('/models',methods=['GET'])
 def models():
     return render_template('models.html',rnum=np.random.randint(0,100000)) 
+
 
 # page with form for generating time-based plots
 @app.route('/time_series_form',methods=['GET','POST'])
@@ -159,6 +169,7 @@ def time_series_form():
         return redirect('/time_series') #otherwise, go to the graph page
     
     return render_template('time_series_form.html', ts_form=mform) 
+
 
 # results page for time-based plots
 @app.route('/time_series',methods=['GET','POST'])
@@ -182,7 +193,36 @@ def time_series():
 # page with form for generating time-based plots
 @app.route('/current_loans',methods=['GET','POST'])
 def current_loans():
+    global predictions, load_time
+    
+    cur_time = time.time()
+    if (cur_time - load_time) > refresh_loan_time:       
+        load_time = cur_time        
+        print('Grabbing loan data at {}'.format(load_time))
+        predictions = LCP.get_LC_loans(auth_keys['LC_auth_key'], model_data,
+                                       zip3_loc_data, use_grades)
+    
     mform = cl_form(request.form)          
+    if request.method == 'POST':
+        app.cl_form = mform
+        return redirect('/current_loans_results') 
+       
+    else:
+        fig = LCP.make_dp_ret_figure(predictions, 0, predictions)
+        plt.savefig(fig_dir + 'cl_dp_ret.png', dpi=500, format='png')
+        plt.close()
+            
+        return render_template('current_loans.html', cl_form=mform, 
+                               rnum=np.random.randint(0,100000),
+                               tot_loans=len(predictions)) 
+
+
+@app.route('/current_loans_results',methods=['GET','POST'])
+def current_loans_results():
+    mform = cl_form(request.form) 
+    if request.method == 'GET':
+        mform = app.cl_form
+
     bool_vals = {'use_A':'A','use_B':'B','use_C':'C','use_D':'D',
                  'use_E':'E','use_F':'F'}
     constraints = {}
@@ -193,6 +233,7 @@ def current_loans():
     allowed_loans = predictions[(predictions.dp <= constraints['max_dp']) & \
                                 (predictions.grades.isin(constraints['use_grades']))]
     pick_K = min([mform.data['port_size'], len(allowed_loans)])
+
     loan_ids_string = ', '.join(allowed_loans[:pick_K]['ids'].values.astype(str))
     fig = LCP.make_dp_ret_figure(predictions, pick_K, allowed_loans)
     plt.savefig(fig_dir + 'cl_dp_ret.png', dpi=500, format='png')
@@ -203,18 +244,9 @@ def current_loans():
         plt.savefig(fig_dir + 'cl_ret_dist.png', dpi=500, format='png')
         plt.close()
         
-    return render_template('current_loans.html', cl_form=mform, 
+    return render_template('current_loan_results.html', cl_form=mform, 
                            pick_K=pick_K, rnum=np.random.randint(0,100000),
-                            loan_ids=loan_ids_string) 
-
-
-# Load latest LC data
-@app.route('/update_loans',methods=['GET'])
-def update_loans():
-    print('grabbing latest loans')
-    predictions = LCP.get_LC_loans(auth_keys['LC_auth_key'], model_data, 
-                                   zip3_loc_data, use_grades)
-    return redirect('/current_loans') 
+                           loan_ids=loan_ids_string) 
 
 
 if __name__ == '__main__':

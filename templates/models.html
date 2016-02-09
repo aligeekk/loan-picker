@@ -27,7 +27,7 @@
 			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Comparing Models</h2>
 			</a>
 			<p>Comparing returns on portfolios of varying sizes, selected using different models, we see that even a model based only on the borrower's location can provide significantly better returns compared to chance. The full random forest model, using all loan features, can provide increases in returns of up to 10%. This analysis also shows that the number of loans in the portfolio also serves to control the bias/variance tradeoff, with larger portfolios having decreased variance (and hence lower risk), but higher bias (worse average performance).</p>
-				<img class="img-responsive center-block" src="/static/images/full_mod_compare.png?{{rnum}}" width="700"></img>
+				<img class="img-responsive center-block" src="/static/images/full_mod_compare_ROI.png?{{rnum}}" width="700"></img>
 			</div>
 
 			<div>
@@ -37,7 +37,7 @@
 			<p>Another important questions is the extent to which these models are improving the returns for loans across all risk levels (i.e. loan grades), or whether they are simply telling us to select from the riskier loans which have better average returns. To look at this, we can compare the portfolio returns for different models at each loan grade. Riskier loans (lower grades) do tend to provide better returns overall, but the models substantially improve returns even for loans of a given grade.</p>
 			<div class="row">
 				<div class="col-sm-6">
-			<img class="img-responsive center-block" src="/static/images/grade_returns.png?{{rnum}}" width="500"></img>
+			<img class="img-responsive center-block" src="/static/images/grade_returns_ROI.png?{{rnum}}" width="500"></img>
 				</div>
 				<div class="col-sm-6">
 			<img class="img-responsive center-block" src="/static/images/picked_grades_props.png?{{rnum}}" width="500"></img>
@@ -50,7 +50,7 @@
 			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Generalizing predictions over time</h2>
 			</a>
 			<p>Traditional K-fold cross-validation, as used above, does not tell us how well our model predictions will generalize to future loans, where the relationship between loan features and outcomes may change. One way to estimate the future performance of the model is to train it on loans issued up to a certain date, and then test its performance on predicting 'future' loan outcomes. Since the majority of loans in the LC data set were recently issued, I chose a slightly different approach, where I trained the model on ~200k loans issued in 2015 (green region below), and then tested the ability of the model to predict loans issued at varying times in the past. This ensured that there was a sufficient number of loans in the training set, while allowing for validation on test sets that were well separated in time from the training set. Somewhat surprisingly, the improved returns provided by selecting loans based on the model predictions were well-preserved when testing on loans as far back as 2010.</p>
-			<img class="img-responsive center-block" src="/static/images/time_validation.png?{{rnum}}" width="800"></img>
+			<img class="img-responsive center-block" src="/static/images/time_validation_ROI.png?{{rnum}}" width="800"></img>
 			</div>
 
 			<div>

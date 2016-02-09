@@ -401,7 +401,7 @@ jitt_x = 0.6
 alpha = 0.75
 #err_norm = np.sqrt(n_folds)
 err_norm = 1.0
-fig = plt.figure(figsize=(6.0,5.0))
+fig = plt.figure(figsize=(5.0,4.0))
 ax = plt.subplot(1,1,1)
 for idx, mod_name in enumerate(model_names):
     plt.errorbar(np.arange(len(grades)) + idx*jitt_x/n_mods - jitt_x/(2.),
