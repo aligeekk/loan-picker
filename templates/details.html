@@ -10,6 +10,7 @@
 	</div>
 <div class="row">
 	<div class="col-sm-12 blog-main">
+		<!-- The Data -->
 		<div class="blog-post">
 		<p>All analysis was done using Lending Club's publically available loan data, which can be downloaded <b><a href="https://www.lendingclub.com/info/download-data.action">here</a></b>. This dataset consists of 750k loans dating back to 2007, and at the time of this analysis going up to 09/30/15. Lending Club assigns each loan a grade based on their risk assessment, which they use to set the interest rate for the loan.</p>
 
@@ -21,9 +22,10 @@
 		<div class="col-sm-6">
 		<img src="/static/images/grade_cond_dists.png" width="500" class="img-responsive center-block"></img>
 		</div>
-	</div>
-</div>
+		</div>
+		</div>
 
+	<!-- Measuring performance -->
 	<div class="blog-header">
 		<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Calc Exp Returns">
 		<h1 style="padding-top: 50px; margin-top: -50px;" class="blog-title">Measuring loan performance</h1>
@@ -35,16 +37,17 @@
 <div class="row">
 	<div class="col-sm-12 blog-main">
 
-		<!-- POST ABOUT HAZARD FUNCTIONS-->
+		<!-- NAR-->
 		<div class="blog-post">
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Annualized Returns">
-			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Annualized Returns</h2>
+			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title"> Net Annualized Returns (NAR)</h2>
 			</a>
 			<p>Calculating returns on matured loans is relatively straightforward, at least with the 'net annualized returns' (NAR) formula used by Lending Club. This simply calculates the percentage return in each month (interest made, minus service fees and principal lost through charge-offs), and then computes an average monthly return, weighted by the outstanding principal in each month. This in then converted into an annualized return by compounding monthly. </p>
 			<img src="/static/images/LC_NAR_formula.png" width="700" class="img-responsive center-block"></img>
 			<p>(Taken from the Lending Club <a href="https://www.lendingclub.com/public/lendersPerformanceHelpPop.action">website</a>)</p>
 		</div>
 		
+		<!-- Hazard functions -->
 		<div class="blog-post">
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Hazard Functions">
 			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Hazard Functions</h2>
@@ -56,7 +59,7 @@
 		</div>
 
 
-		<!-- POST ABOUT EXPECTED RETURNS-->
+		<!-- EXPECTED RETURNS-->
 		<div class="blog-post">
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Expected Returns">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Expected Returns</h2>
@@ -64,17 +67,19 @@
 			<p>Given the hazard function for each loan type, estimating the expected return for a given loan is relatively straightforward. We first calculate the average monthly return (<i>MR</i>) that we would recieve if the loan defaulted at each possible payment period <i>MR</i>(<i>default</i><sub><i>i</i></sub>). We can then calculate the weighted average of <i>MR</i>, using the estimated default probabilities at each time point, converting it into an annualized return as follows:
 			<center><img src="static/images/expected_returns.png?{{rnum}}" width="500"></img></center>
 			For an outstanding loan, we set the default probabilities to zero for all payments that have already been received. We also use a heuristic strategy to incorporate the reported loan status. Specifically, I use the data Lending Club provides <a href="https://www.lendingclub.com/info/demand-and-credit-profile.action">here</a> (bottom of page) on the average fraction of principal recovered for loans in varying stages of delinquency. I also make the (admittedly questionable) assumption that if payment is resumed, the loan returns to having its original set of default probabilities for the remainder of its term.</p>
-			<p>The figures below show how these expected return values depend on both a loan's default probability, as well as its interest rate.</p>
+			<p>The figures below show how these expected return values depend on a loan's current status, grade and interest rate.</p>
 			
 		<div class="row">
-			<div class="col-sm-6">
+<!-- 			<div class="col-sm-6">
 				<img src="/static/images/ROI_def_prob.png?{{rnum}}" width="450" class="center-block"></img>
 			</div>
+ -->		<div class="col-sm-6">
+			<img src="/static/images/int_ROI_joints.png?{{rnum}}" width="450" class="center-block"></img>
+			</div>
+		<!-- </div> -->
 			<div class="col-sm-6">
-			<img src="/static/images/int_ROI_joints.png?{{rnum}}" width="400" class="center-block"></img>
-		</div>
-	</div>
 			<img src="/static/images/returns_box.png?{{rnum}}" width="500" class="center-block"></img>
+			</div>
 		</div>
 	</div>
 
@@ -98,9 +103,9 @@
 			<p>Lending Club provides a set of ~50 features specifying the initial state of each loan. Some of these features are not useful for predicting loan outcomes (i.e. a loan's unique ID number), others are redundant, and most of them need some sort of massaging to get them into a format that we can plug into the models. For full details on these feature transformations see the <a href="https://github.com/jmmcfarl/loan-picker">source code</a>.	I'm currently using 30 different features for each loan. Here are a few of the non-trivial 'feature engineering' steps I found useful:
 			<ul>
   				<li>Transforming 3-digit borrower zip codes into latitude and longitude coordinates. One can also treat zip-code as a categorical variable but that leads to significant overfitting problems (and takes lots of memory with a one-hot encoding).</li>
-  				<li>The text descriptions provided with each loan can be empty, or can have additional entries added at later dates. I separated this out into two features: total length of description text, and number separate descriptions added. For predicting currently available loans I ignored these later additions to the descriptions.</li>
-  				<li>I used a one-hot encoding for all categorical variables.</li>
-  				<li>While decision tree models are insensitive to the scale of the features, feature scale does matter for other models (e.g. linear regression). Thus, I used different affine transformations for each ordinal feature (plus log-scaling in some cases).</li>
+  				<li>The text descriptions provided with each loan can be empty, or can have additional entries added at later dates. I separated this out into two features: total length of text, and number of separate descriptions added.</li>
+  				<li>I used a one-hot encoding for all categorical variables (ideally one could use categorical variables directly, at least with the decision-trees, but apparently not using scikit-learn at this point.</li>
+  				<li>While decision tree models are insensitive to the scale of the features, feature scale does matter for other models (e.g. linear regression). Thus, I used different affine transformations (scikit-learn's minMaxScaler, maxAbsScaler, standardScaler, and robustScaler transformations) for each ordinal feature (plus log-scaling in some cases).</li>
   			</ul>
 		</p>
 		</div>
@@ -109,15 +114,23 @@
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Cross validation">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Model training and validation</h2>
 			</a>
-			<p>So far I've tried several different models, including linear regression, a linear support vector machine (SVM), gradient tree boosting, and random forests, but I'm looking to test artificial neural network approaches as well. For each model I select key parameters using a cross-validated grid-search. Final performance of each model is then evaluated using 10-fold cross-validation.</p>
+			<p>So far I've tried several different models, including linear regression, a linear support vector machine (SVM), gradient tree boosting, and random forests, but I'm looking to test other models (e.g. artificial neural network approaches) as well. For each model I select key parameters using a cross-validated grid-search. Final performance of each model is evaluated using 10-fold cross-validation.</p>
 		</div>
 
 		<div class="blog-post">
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Portfolio returns">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Estimating returns on loan portfolios</h2>
 			</a>
-			<p>Rather than measuring the ability of the models to predict the returns of individual loans (such as with an R2 value), a more useful approach is to quantify the returns on a portfolio of loans selected using a particular strategy. To do this, I estimate the returns on investment portfolios with <i>K</i> loans, where we select the top <i>K</i> loans predicted by our model. I then calculate the returns on these portfolios using the same 'NAR' formula above. This simply requres keeping track of the (expected) net gains recieved from each loan, as well as the (expected) cumulative sum of outstanding principal over the entire term (i.e., the denominator in the NAR equation). You can then simply sum these terms over all loans in a given portfolio and divide them to get the NAR for the portfolio. I could also of course weight different loans by their principal to get a more accurate reflection of their contribution to the portfolio, but I opted not to do that in order to avoid having the results be dominated by larger loans.</p>
+			<p>Rather than measuring the ability of the models to predict the returns of individual loans (such as with an R2 value), a more useful/intuitive approach is to quantify the returns on a portfolio of loans selected using a particular model-based strategy. To do this, I estimate the returns on investment portfolios with <i>K</i> loans, where we select the <i>K</i> loans with the highest model-predicted returns. I then calculate the returns on these portfolios using the same 'NAR' formula above. This simply requres keeping track of the (expected) net gains recieved from each loan, as well as the (expected) cumulative sum of outstanding principal over the entire term (i.e., the denominator in the NAR equation). I could also of course weight different loans by their principal to get a more accurate reflection of their contribution to the portfolio, but I opted not to do that in order to avoid having the results be dominated by larger loans.</p>
 				<img class="img-responsive center-block" src="/static/images/loan_pred_examp.png?{{rnum}}" width="500"></img>
+		</div>
+
+		<div class="blog-post">
+			<br>
+			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Fitting classifiers">
+			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Fitting classifiers</h2>
+			</a>
+			<p>In addition to building regression models, I also trained classifiers to predict each loan's default probability. This basically just involves taking the same set of features, plugging them into scikit-learn's classifier estimators (rather than regressors), and using the calculated default probabilities rather than the ROI as the target variable. For loans where we have observed the final outcome the default probability is either a one or zero, and we can treat this as a class label, however for unobserved loans it represents a class probability. Since scikit-learn's classifier fit functions don't accept class probabilities natively, we need to do a little massaging. To get around this, I used the 'sample_weights' optional input, and fed in each unobserved data point twice, once with each class label, using the estimated class probabilities as the sample weights.</p>
 		</div>
 
 		<!-- Post abut visualizing Random Forest regression -->
@@ -126,7 +139,7 @@
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Decision tree">
 			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Visualizing decision tree regression</h2>
 			</a>
-			<p>To illustrate how decision-tree regression works, I made an animation showing how the model-predicted loan returns vary as function of the borrower's geographic location when using a decision tree with increasing 'tree depth'. As the decision tree depth increases, the number of 'partitions' of the input space, within which the model can estimate separate average returns, increases exponentially. For a random forest, we're basically estimating many such decision trees in parallel (using random samples of the datapoints and features), and then taking the average output over trees as our prediction.</p>
+			<p>As a fun aside, I made an animation illustrating how a decision tree regressor 'partitions' a 2d feature space (in this case, the geographic location of the borrower). Each frame of the animation shows the predicted loan returns for each location, using a decision tree with increasing 'tree depth'. As the decision tree depth increases, the number of 'partitions' of the input space, within which the model can estimate separate average returns, increases exponentially. For a random forest, we're basically estimating many such decision trees in parallel (using random samples of the datapoints and features), and then taking the average output over trees as our prediction.</p>
 			<video class="img-responsive center-block" width="600" controls>
  			 <source src="/static/movies/tree_movie.mp4?{{rnum}}" type="video/mp4">
 			Your browser does not support the video tag.
@@ -134,13 +147,6 @@
 			<img class="img-responsive center-block" src="/static/movies/tree_cbar.png?{{rnum}}" width="600"></img>
 		</div>
 
-		<div class="blog-post">
-			<br>
-			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Fitting classifiers">
-			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Fitting classifiers</h2>
-			</a>
-			<p>Fitting classifiers for predicting default probability basically just involves invoking scikit-learn's classifier estimators rather than regressors, and feeding in the calculated default probabilities rather than the ROI as the target variable. For loans where we have observed the final outcome the default probability is either a one or zero, and we can treat this as a class label, however for unobserved loans it represents a class probability. Since scikit-learn's classifier fit functions don't accept class probabilities natively, we need to do a little massaging. To get around this, I used the 'sample_weights' optional input, and fed in each unobserved data point twice, once with each class label, using the estimated class probabilities as the sample weights.</p>
-		</div>
 
 <!-- 		<div class="blog-post">
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Cross validation">
