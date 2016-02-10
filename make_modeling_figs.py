@@ -376,7 +376,7 @@ if grade_group == 'sub_grade':
     big_grade_idx = np.arange(6)*n_subgrades + n_subgrades//2
     for idx in big_grade_idx:
         leg_hands.append(mlines.Line2D([],[],linewidth=4, color=pal[idx]))
-    ax.legend(leg_hands,big_grades)
+    ax.legend(leg_hands,big_grades,loc='upper left')
     
 plt.ylabel('Proportion of picked loans',fontsize=16)
 plt.xlabel('Selection Method',fontsize=16)
