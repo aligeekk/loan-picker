@@ -203,7 +203,7 @@ kf = KFold(len(X), n_folds=n_folds, shuffle=True, random_state=0)
 pick_K_list = [10, 100, 1000] #list of portfolio sizes to test
 grade_pick_K = 100 #portfolio size for computing separate grade-based portfolio returns
 n_feature_shuffs = 3 #number of times to shuffle features (at each fold) for computing feature-importances
-grade_group = 'sub_grade' #either grade or sub-grade
+grade_group = 'grade' #either grade or sub-grade
 
 unique_grades = sorted(LD[grade_group].unique())
 test_R2 = defaultdict(list)
@@ -295,7 +295,7 @@ if plot_figures:
 
 
 #%% Plot comparison of model returns
-model_names = [name for name, _ in model_set]
+model_names = [name for name, _ in model_set if name != 'Null']
 group_titles = [leg_titles[name] for name in model_names]
 
 new_dict = {key: arr[:,0] for key,arr in zip(returns.keys(), 
@@ -382,7 +382,8 @@ plt.ylabel('Proportion of picked loans',fontsize=16)
 plt.xlabel('Selection Method',fontsize=16)
 plt.tight_layout()
 if plot_figures:
-    plt.savefig(fig_dir + 'picked_grades_props.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'picked_grades_props_{}.png'.format(grade_group), 
+                dpi=500, format='png')
     plt.close()
 
 
@@ -423,7 +424,8 @@ plt.legend(loc='best', fontsize=14)
 plt.tight_layout()
 
 if plot_figures:
-    plt.savefig(fig_dir + 'grade_returns_ROI.png', dpi=500, format='png')
+    plt.savefig(fig_dir + 'grade_returns_ROI_{}.png'.format(grade_group), 
+                dpi=500, format='png')
     plt.close()
 
 
