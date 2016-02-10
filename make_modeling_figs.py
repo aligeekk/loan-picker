@@ -398,7 +398,7 @@ n_mods = len(model_names)
 #mod_names = ['Random','Linear','Linear SVR','Gradient Boosting','Random Forest']
 pal = sns.color_palette("muted", n_colors=len(model_names))
 
-jitt_x = 0.6
+jitt_x = 0.3
 alpha = 0.75
 #err_norm = np.sqrt(n_folds)
 err_norm = 1.0
@@ -417,7 +417,10 @@ plt.xlim(-0.4, len(grades)+0.4)
 plt.ylim(0,30)
 grades = np.concatenate(([''],grades))
 ax.set_xticks(np.arange(len(grades))-1)
-ax.set_xticklabels(grades, fontsize=12,rotation='vertical')
+if grade_group == 'sub_grade':
+    ax.set_xticklabels(grades, fontsize=12,rotation='vertical')
+else:
+    ax.set_xticklabels(grades, fontsize=12)
 plt.xlabel('Loan Grade',fontsize=16)
 plt.ylabel('Annualized ROI (%)',fontsize=16)
 plt.legend(loc='best', fontsize=14)
