@@ -18,7 +18,7 @@
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Feature Selection">
 			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Feature Selection</h2>
 			</a>
-			<p>There are many other loan features, in addition to borrower location, that we can add to our random forest model. To determine the relative importance of each loan feature we can measure how much the prediction accuracy decreases if we randomly shuffle the values of that loan feature in the test set. This analysis shows that borrower location has relatively low importance compared with some of the loan features more directly associated with a borrower's credit history.</p>
+			<p>For each loan we're given around 50 different features specifying the 'initial state' of the loan. Many of these are redundant, or useless, and others need to be massaged into a format that can be plugged into the models. To determine the relative importance of each loan feature we can measure how much the prediction accuracy decreases if we randomly shuffle the values of that loan feature in the test set. This analysis shows that borrower location has relatively low importance compared with some of the loan features more directly associated with a borrower's credit history.</p>
 				<img class="img-responsive center-block" src="/static/images/fullRF_feature_imp.png?{{rnum}}" width="600"></img>
 			</div>
 
@@ -35,6 +35,15 @@
 			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Returns by risk level</h2>
 			</a>
 			<p>Another important questions is the extent to which these models are improving the returns for loans across all risk levels (i.e. loan grades), or whether they are simply telling us to select from the riskier loans which have better average returns. To look at this, we can compare the portfolio returns for different models at each loan grade. Riskier loans (lower grades) do tend to provide better returns overall, but the models substantially improve returns even for loans of a given grade.</p>
+			<div class="row">
+				<div class="col-sm-6">
+			<img class="img-responsive center-block" src="/static/images/grade_returns_ROI_grade.png?{{rnum}}" width="500"></img>
+				</div>
+				<div class="col-sm-6">
+			<img class="img-responsive center-block" src="/static/images/picked_grades_props_grade.png?{{rnum}}" width="500"></img>
+				</div>
+			</div>
+			</div>
 			<div class="row">
 				<div class="col-sm-6">
 			<img class="img-responsive center-block" src="/static/images/grade_returns_ROI.png?{{rnum}}" width="500"></img>

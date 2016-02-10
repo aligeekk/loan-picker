@@ -13,7 +13,7 @@
 		<div class="blog-post">
 		<p>All analysis was done using Lending Club's publically available loan data, which can be downloaded <b><a href="https://www.lendingclub.com/info/download-data.action">here</a></b>. This dataset consists of 750k loans dating back to 2007, and at the time of this analysis going up to 09/30/15. Lending Club assigns each loan a grade based on their risk assessment, which they use to set the interest rate for the loan.</p>
 
-		<p>For each loan, we're given about 70 different pieces of information about the loan and the borrower, along with information about the loan's payment history and current status. The older loans that have matured will either have a status of 'fully paid' or they will have been 'charged off' (i.e. they will have defaulted and the ouststanding principal will have been written off). Most of the loans were issued relatively recently, however, and are still ongoing. So, we don't know their 'final outcome', but we're give their current status as either 'current', meaning the borrower is up-to-date on their payments, or they can be at various stages of delinquency. As expected, loans with lower grades (i.e. F) are more likely to be in a delinquent status.</p>
+		<p>For each loan, we're given about 50 different pieces of information about the loan and the borrower, along with information about the loan's payment history and current status. The older loans that have matured will either have a status of 'fully paid' or they will have been 'charged off' (i.e. they will have defaulted and the ouststanding principal will have been written off). Most of the loans were issued relatively recently, however, and are still ongoing. So, we don't know their 'final outcome', but we're give their current status as either 'current', meaning the borrower is up-to-date on their payments, or they can be at various stages of delinquency. As expected, loans with lower grades (i.e. F) are more likely to be in a delinquent status.</p>
 		<div class="row">
 		<div class="col-sm-6">
 		<img src="/static/images/year_cond_dist.png" width="500" class="img-responsive center-block"></img>
@@ -51,7 +51,7 @@
 			</a>
 			<p>For outstanding loans it's more difficult because we don't know what the full payment outcome will be, so we can't directly calculate the NAR. The approach I took is to use the current status and payment history of each loan to estimate an 'expected' rate of return. To do this I first needed to compute the probabiliy that a given loan will go into default at each payment period. These probabilities are described by a 'hazard function', which I estimate for each loan grade, and for each loan term (36 month and 60 month loans).</p>
 
-			<p>I use the Python module <a href="http://lifelines.readthedocs.org/en/latest/">lifelines</a> to estimate the hazard functions, specifically the <a href="https://en.wikipedia.org/wiki/Nelson%E2%80%93Aalen_estimator">Nelson-Aalen estimator</a>. This analysis shows that riskier loans (lower letter grades) are both more likely to default overall, and are more likely to default earlier in the loan term (the hazard functions are shifted leftwards).</p>
+			<p>I used the <a href="https://en.wikipedia.org/wiki/Nelson%E2%80%93Aalen_estimator">Nelson-Aalen estimator</a>, implemented in the Python module <a href="http://lifelines.readthedocs.org/en/latest/">lifelines</a> to estimate the hazard functions. This analysis shows that riskier loans (lower letter grades) are both more likely to default overall, and are more likely to default earlier in the loan term (the hazard functions are shifted leftwards).</p>
 			<img src="/static/images/hazard_funs.png" width="900" class="center-block"></img>
 		</div>
 
@@ -89,6 +89,21 @@
 
 	<div class="row">
 		<div class="col-sm-12 blog-main">
+
+		<!-- FEATURE SELECTION-->
+		<div class="blog-post">
+			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Cross validation">
+			<h2 style="padding-top: 50px; margin-top: -50px;"  class="blog-post-title">Feature selection</h2>
+			</a>
+			<p>Lending Club provides a set of ~50 features specifying the initial state of each loan. Some of these features are not useful for predicting loan outcomes (i.e. a loan's unique ID number), others are redundant, and most of them need some sort of massaging to get them into a format that we can plug into the models. For full details on these feature transformations see the <a href="https://github.com/jmmcfarl/loan-picker">source code</a>.	I'm currently using 30 different features for each loan. Here are a few of the non-trivial 'feature engineering' steps I found useful:
+			<ul>
+  				<li>Transforming 3-digit borrower zip codes into latitude and longitude coordinates. One can also treat zip-code as a categorical variable but that leads to significant overfitting problems (and takes lots of memory with a one-hot encoding).</li>
+  				<li>The text descriptions provided with each loan can be empty, or can have additional entries added at later dates. I separated this out into two features: total length of description text, and number separate descriptions added. For predicting currently available loans I ignored these later additions to the descriptions.</li>
+  				<li>I used a one-hot encoding for all categorical variables.</li>
+  				<li>While decision tree models are insensitive to the scale of the features, feature scale does matter for other models (e.g. linear regression). Thus, I used different affine transformations for each ordinal feature (plus log-scaling in some cases).</li>
+  			</ul>
+		</p>
+		</div>
 
 		<div class="blog-post">
 			<a style="pointer-events: none; cursor: default; text-decoration: none;" name="Cross validation">

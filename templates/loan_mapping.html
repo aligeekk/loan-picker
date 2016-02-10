@@ -19,11 +19,11 @@
 			<form action="" method="post" name="map_form">
 				<div class="row">
 					<div class="col-sm-6 col-sm-push-1">
-						<p><b>Choose grouping variable</b> {{ map_form.grouping_var }}</p>
-						<p><b>Choose agg function</b> {{ map_form.agg_fun }}</p>
+						<p><b>Choose grouping variable</b> <small>{{ map_form.grouping_var }}</small></p>
+						<p><b>Choose aggregation function</b> <small>{{ map_form.agg_fun }}</small></p>
 					</div>
 					<div class="col-sm-6">
-						<p><b>Choose value to plot</b>{{ map_form.col_name }}</p>
+						<p><b>Choose value to plot</b><small>{{ map_form.col_name }}</small></p>
 					</div>
 				</div>
 				<div class="row">
@@ -48,7 +48,7 @@
 			<!-- Make plot of cumulative distributions -->
 
 			<h3 style="left:100px">Cumulative distributions of {{map_form.var_dict[map_form.data['col_name']]}} grouped by {{map_form.group_dict[map_form.data['grouping_var']]}}</h3>
-			<p>This shows how much geographic variability there was in the within-location averages, relative to what would be expected by chance.</p>
+			<p>This shows the amount of variability in the within-location averages, relative to what would be expected by chance.</p>
 			<img src="/static/images/{{map_form.data['grouping_var']}}_ROI_cdist.png?{{rnum}}" width="600"></img>
 			<br>
 			</div>

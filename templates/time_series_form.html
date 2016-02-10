@@ -4,7 +4,7 @@
 <div class="container">
 
 	<div class="blog-header">
-		<h1 class="blog-title">Visualize loan stats over time</h1>
+		<h1 class="blog-title">Changes in loans over time</h1>
 <!-- 		<p class="lead blog-description">Blah blah.</p>
 -->	
 </div>
@@ -14,19 +14,19 @@
 
 		<!-- POST ABOUT DIFFERENT LOAN STATUSES-->
 		<div class="blog-post" style="position:absolute;top:0px;">
-			<h4>Use the options below to visualize how different loan attributes vary geographically.</h4>
+			<h4>Use the options below to visualize how different loan attributes vary over time. Time in this case is the issue date of the loan. You can choose how to group the data, or you can plot quantiles of the response variable at each time point.</h4>
 			<form action="" method="post" name="ts_form">
 				<div class="row">
 					<div class="col-sm-7">
-						<p><b>Choose values to plot</b>{{ ts_form.col_name}}</p>
+						<p><b>Choose values to plot</b><small>{{ ts_form.col_name}}</small></p>
 						<p><b>Choose smoothing span (in months)</b>{{ ts_form.smooth_span}}</p>
 						<p><b>Choose number of quantiles</b>{{ ts_form.num_quantiles}}</p>
 					</div>
 					<div class="col-sm-5">
-						<p><b>Choose grouping variable</b> {{ts_form.grouping_var }}</p>
-						<p><input class="btn btn-success" type="Submit" value="Submit"></p>
+						<p><b>Choose grouping variable</b><small>{{ts_form.grouping_var }}</small></p>
 					</div>
 				</div>
+						<p><input class="btn btn-success btn-lg" type="Submit" value="Submit"></p>
 			</form>
 		</div>
 	</div>

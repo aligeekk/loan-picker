@@ -81,6 +81,7 @@
                <li><a href="models#Time Validation">Generalizing Predictions over Time</a></li>
               <li><a href="models#Available loans">Towards automated investing</a></li>
                <li><a href="current_loans"><b>Predict new loans</b></a></li>
+               <li><a href="details#Dataset"><b>The Dataset</b></a></li>
                <li><a href="details#Calc Exp Returns"><b>Calculating Expected Returns</b></a></li>
                 <li><a href="details#Loan Status">Loan Status</a></li>
                 <li><a href="details#Annualized Returns">Annualized Returns</a></li>
@@ -101,11 +102,10 @@
 <div class="container">
 
 	<div class="blog-header">
-		<h1 class="blog-title">{{leg_map[ts_form.data['col_name']]}}</h1>
+		<h1 class="blog-title">Average {{leg_map[ts_form.data['col_name']]}} over time</h1>
 	</div>
       <form action="" method="post" name="sform">
-            <p><b>Choose smoothing span in months:</b> {{sform.smooth_span}}</p>
-            <p><input class="btn btn-success" type="Submit" value="Submit"></p>
+            <p><b>Choose smoothing span in months:</b> {{sform.smooth_span}}<input class="btn btn-success" type="Submit" value="Submit"></p>
       </form>
 
 	<a href="time_series_form">Back</a>
