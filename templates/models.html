@@ -58,7 +58,7 @@
 			<h2 style="padding-top: 50px; margin-top: -50px;" class="blog-post-title">Modeling default probabilities</h2>
 			</a>
 			<p>In addition to building regression models that predict the ROI of each loan directly, one can also make classifiers for predicting whether or not a loan will default. This can be useful for quantifying the risk associated with a given loan, in addition to its expected ROI. With scikit-learn this requires a bit of care (see <a href="details#Fitting classifiers">details</a>), but essentially I just fed the same set of predictors into a Random Forest classifier. We can then use the classifier to predict the default probabilities associated with each loan, using only the initial loan info provided, just as we would generate a predicted return. We can see that the predicted annual returns and default probabilities are negatively correlated at each loan grade (interest rate level), as we would expect.</p>
-			<img class="img-responsive center-block" src="/static/images/ret_dp_compare.png?{{rnum}}" width="600"></img>
+			<img class="img-responsive center-block" src="/static/images/ret_dp_compare.png?{{rnum}}" width="500"></img>
 			</div>
 
 		</div>
