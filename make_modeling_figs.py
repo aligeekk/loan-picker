@@ -369,10 +369,14 @@ sns.barplot(x='Model',y='values',data=makeup_df,hue='grade',palette=pal,
             hue_order=unique_grades,ax=ax)
 
 ax.legend_.remove()
-n_subgrades=5
 big_grades = ['A','B','C','D','E','F']
 leg_hands = []
-big_grade_idx = np.arange(6)*n_subgrades + n_subgrades//2
+if grade_group == 'sub_grade':
+    n_subgrades=5
+    big_grade_idx = np.arange(len(big_grades))*n_subgrades + n_subgrades//2
+else:
+    big_grade_idx = np.arange(len(big_grades))
+    
 for idx in big_grade_idx:
     leg_hands.append(mlines.Line2D([],[],linewidth=4, color=pal[idx]))
 ax.legend(leg_hands,big_grades,loc='upper left')
