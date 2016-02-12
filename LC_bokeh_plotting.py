@@ -16,7 +16,7 @@ from bokeh.embed import components #to generate embedded html
 tools = "pan,box_zoom,reset,resize" #set of tools to include in the Bokeh toolbar
 
 
-def plot_agg_comparison(LD, value, groupby, sm=5, n_quantiles=10):
+def plot_agg_comparison(LD, value, groupby, name_legend_map, sm=5, n_quantiles=10):
     '''Make Bokeh time series plot.
     INPUTS:
         LD: pandas dataframe with loan data
@@ -26,7 +26,7 @@ def plot_agg_comparison(LD, value, groupby, sm=5, n_quantiles=10):
         n_quantiles: number of quantiles to use if plotting response variable by quantiles.
     OUTPUTS:
         (script, div) html components of Bokeh plot.'''
-
+    
     min_counts = 500 #min number of loans for each group (across all time points) for inclusion in plot
     if value == 'counts': #treat response variable 'counts' by setting that to the agg fnx.
         agg = 'count'
@@ -34,14 +34,6 @@ def plot_agg_comparison(LD, value, groupby, sm=5, n_quantiles=10):
     else:
         agg = 'mean'    
     
-    #map of response variables to axis titles.
-    name_legend_map = {'counts': 'Number of loans (thousands)',
-				 'ROI': 'ROI (%)',
-				 'int_rate': 'interest rate (%)',
-				 'default_prob': 'default probability',
-				 'dti': 'Debt-to-income ratio',
-				 'emp_length':'employment length (months)',
-                        'annual_inc':'annual income ($)'}
     if groupby == 'loan_status': #specify order and pallete if plotting by loan-status
         group_set = ['Fully Paid', 'Current', 'In Grace Period','Late (16-30 days)', 
                      'Late (31-120 days)', 'Default', 'Charged Off']

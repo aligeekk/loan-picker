@@ -21,11 +21,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.base import clone
-from sklearn.pipeline import Pipeline
-from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import ShuffleSplit, train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.calibration import calibration_curve, CalibratedClassifierCV
 
 #base_dir = os.path.dirname(os.path.realpath(__file__))
 base_dir = '/Users/james/Data_Incubator/loan-picker'
@@ -41,6 +37,7 @@ plot_calibration = True
 data_dir = os.path.join(base_dir,'static/data/')
 fig_dir = os.path.join(base_dir,'static/images/')
 plot_figures = True
+
 #%%
 #load data 
 data_name = 'all_loans_proc'
@@ -159,10 +156,10 @@ def get_calibration_curve(obs, pred, n_bins):
 
 #%% DEFINE MODELS
 #CLASSIFIER
-max_depth=16 #16
+max_depth=16 
 min_samples_leaf=50
 min_samples_split=100
-n_trees=100 #100
+n_trees=100 
 RF_defClass = RandomForestClassifier(n_estimators=n_trees, max_depth=max_depth, 
                                min_samples_leaf=min_samples_leaf, 
                                min_samples_split=min_samples_split,n_jobs=4, 
@@ -172,7 +169,7 @@ RF_defClass = RandomForestClassifier(n_estimators=n_trees, max_depth=max_depth,
 max_depth=16
 min_samples_leaf=50
 min_samples_split=100
-n_trees=100 #100
+n_trees=100 
 RF_est = RandomForestRegressor(n_estimators=n_trees, max_depth=max_depth, 
                                min_samples_leaf=min_samples_leaf, 
                                min_samples_split=min_samples_split,n_jobs=4, 

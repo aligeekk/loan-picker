@@ -266,7 +266,7 @@ def fill_missing_fips(ktree,map_coords,fips_data):
  
  
 def paint_map(data, soup_map, county_paths = None, fips_to_zip = None, 
-              color = 'blue', get_cbar = True, agg_fun='mean'):
+              color = 'blue', get_cbar = True, name_legend_map=None, agg_fun='mean'):
     '''paints the data onto an svg base map based on either zip3 or states.
     INPUTS:
         data: pandas series of data, indexed by the geographic grouping variable.
@@ -317,13 +317,6 @@ def paint_map(data, soup_map, county_paths = None, fips_to_zip = None,
     if get_cbar: #make color bar if desired
         cbar_fig,ax=plt.subplots(1,1,figsize=(6,1))
         cb1 = cbar.ColorbarBase(ax,cmap=pal, norm=cNorm, orientation='horizontal')  
-        name_legend_map = {'counts': 'Number of loans (thousands)',
-				   'ROI': 'ROI (%)',
-				   'int_rate': 'interest rate (%)',
-				   'default_prob': 'default probability',
-				   'dti': 'Debt-to-income ratio',
-				   'emp_length':'employment length (months)',
-                          'annual_inc':'annual income ($)'}
         if agg_fun == 'count':
             label = 'Number of loans (thousands)'
         else:

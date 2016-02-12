@@ -23,12 +23,13 @@ class map_form(Form):
     agg_dict = {key: val for key, val in agg_funs}
 
     # variable to plot. tuple as (internal_name, human_readable)
-    response_vars = [('ROI', 'returns'), 
+    response_vars = [('ROI', 'annual returns'), 
                      ('int_rate', 'interest rate'),
                      ('annual_inc', 'annual income'),
                      ('default_prob', 'default probability'),
                      ('dti', 'debt-to-income ratio'),
-                     ('emp_length', 'employment length')]
+                     ('emp_length', 'employment length'),
+                     ('funded_amnt','loan amount')]
     var_dict = {key: val for key,val in response_vars}
   
     grouping_var = RadioField('grouping', choices=grouping_vars,
@@ -56,7 +57,8 @@ class ts_form(Form):
                      ('dti','debt-to-income ratio'),
                      ('default_prob','default probability'),
                      ('annual_inc','annual income'),
-                     ('emp_length','employment length')]
+                     ('emp_length','employment length'),
+                     ('funded_amnt','loan amount')]
     
     col_name = RadioField(choices=response_vars, validators=[DataRequired()], default='ROI')
     grouping_var = RadioField('Label', choices=grouping_vars, default='short_purpose')

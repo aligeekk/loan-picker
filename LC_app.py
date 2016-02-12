@@ -42,12 +42,13 @@ map_name = 'USA_Counties_raw.svg' #base svg map of US with counties
 
 # dict of axis labels corresponding to different features we might be plotting
 name_legend_map = {'counts': 'Number of loans (thousands)',
-			            'ROI': 'ROI (%)',
-			            'int_rate': 'interest rate (%)',
-			            'default_prob': 'default probability',
-			            'dti': 'Debt-to-income ratio',
-			            'emp_length':'employment length (months)',
-                  'annual_inc':'annual income ($)'}
+			    'ROI': 'ROI (%)',
+			    'int_rate': 'interest rate (%)',
+                   'default_prob': 'default probability',
+			     'dti': 'Debt-to-income ratio',
+			    'emp_length':'employment length (months)',
+                  'annual_inc':'annual income ($)',
+                    'funded_amnt':'loan amount ($)'}
 
 # dict for making a coarser grouping of loan purposes for plotting purposes
 purpose_map = {'debt_consolidation':'debt',
@@ -130,7 +131,8 @@ def loan_mapping(map_rendered=False):
              data.name = 'counts'
          # paint base map by county
          pal = LCH.paint_map(data, app.base_map, app.county_paths, fips_to_zip, 
-                             color='cube', agg_fun=mform.data['agg_fun'])        
+                             color='cube', name_legend_map=name_legend_map,
+                             agg_fun=mform.data['agg_fun'])        
          # save colorbar for map as a png
          plt.savefig(fig_dir + 'map_cbar.png', dpi=500, format='png')
          plt.close()
@@ -179,11 +181,13 @@ def time_series():
     if request.method == 'GET':
         script, div = LC_bok.plot_agg_comparison(LD, col_name, 
                                                  app.ts_form.data['grouping_var'],
+                                                 name_legend_map,
                                                  sm=app.ts_form.data['smooth_span'],
                                                  n_quantiles=app.ts_form.data['num_quantiles'])
     elif request.method == 'POST':
         script, div = LC_bok.plot_agg_comparison(LD, col_name, 
                                                  app.ts_form.data['grouping_var'],
+                                                 name_legend_map,
                                                  sm=sform.data['smooth_span'],
                                                  n_quantiles=app.ts_form.data['num_quantiles'])
     return render_template('time_series.html', script=script, div=div, 
