@@ -183,7 +183,7 @@ def make_return_dist_fig(sim_lookup, predictions, pick_K=100, n_bins=200, n_boot
     sns.distplot(sim_returns,bins=100, hist=False, rug=False,
                  ax=ax, kde_kws={'color':'k','lw':3})
     plt.xlabel('Annual returns (%)',fontsize=14)
-    plt.ylabel('Probability (%)',fontsize=14)
+    plt.ylabel('Probability',fontsize=14)
     plt.title('Estimated portfolio returns', fontsize=18)
     plt.tick_params(axis='both', which='major', labelsize=10)
     plt.margins(.01, .01)   
